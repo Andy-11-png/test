@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+
+{% block title %}待审批用户{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>待审批用户</h2>
+    
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }}">{{ message }}</div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+    
+    <div class="table-responsive">
+        <table class="table table-hover">
+            <thead>
+                <tr>
+                    <th>姓名</th>
+                    <th>邮箱</th>
+                    <th>状态</th>
+                    <th>教务审批人</th>
+                    <th>人事审批人</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for user in pending_users %}
+                <tr>
+                    <td>{{ user.name }}</td>
+                    <td>{{ user.email }}</td>
+                    <td>
+                        {% if user.status == '0' %}
+                            <span class="badge bg-warning">待审批</span>
+                        {% elif user.status == '1' %}
+                            <span class="badge bg-info">教务已审批</span>
+                        {% elif user.status == '2' %}
+                            <span class="badge bg-success">已通过</span>
+                        {% elif user.status == '3' %}
+                            <span class="badge bg-danger">已拒绝</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if user.e_admin_approver %}
+                            {{ user.e_admin_approver.name }}
+                        {% else %}
+                            -
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if user.he_admin_approver %}
+                            {{ user.he_admin_approver.name }}
+                        {% else %}
+                            -
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if user.status == '0' and current_user.is_e_admin %}
+                            <form action="{{ url_for('user.approve_user', user_id=user.id) }}" method="post" class="d-inline">
+                                <button type="submit" class="btn btn-success btn-sm">通过</button>
+                            </form>
+                            <form action="{{ url_for('user.reject_user', user_id=user.id) }}" method="post" class="d-inline">
+                                <button type="submit" class="btn btn-danger btn-sm">拒绝</button>
+                            </form>
+                        {% elif user.status == '1' and current_user.is_he_admin %}
+                            <form action="{{ url_for('user.approve_user', user_id=user.id) }}" method="post" class="d-inline">
+                                <button type="submit" class="btn btn-success btn-sm">通过</button>
+                            </form>
+                            <form action="{{ url_for('user.reject_user', user_id=user.id) }}" method="post" class="d-inline">
+                                <button type="submit" class="btn btn-danger btn-sm">拒绝</button>
+                            </form>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="6" class="text-center">暂无待审批用户</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

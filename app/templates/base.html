@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="zh">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}{% endblock %} - 问题管理系统</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+        }
+
+        .header {
+            background-color: #333;
+            color: white;
+            padding: 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header h1 {
+            margin: 0;
+            font-size: 1.5rem;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .user-info a {
+            color: white;
+            text-decoration: none;
+        }
+
+        .user-info a:hover {
+            text-decoration: underline;
+        }
+
+        .nav {
+            background-color: #f4f4f4;
+            padding: 0.5rem 1rem;
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            justify-content: center;
+            list-style: none;
+            margin: 0;
+            padding: 0;
+        }
+
+        .nav-item {
+            margin: 0;
+            padding: 0;
+        }
+
+        .nav-link {
+            color: #333;
+            text-decoration: none;
+            padding: 0.5rem 1rem;
+            display: block;
+        }
+
+        .nav-link:hover {
+            background-color: #ddd;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 1rem;
+        }
+
+        .alert {
+            padding: 1rem;
+            margin: 1rem 0;
+            border-radius: 4px;
+        }
+
+        .alert-success {
+            background-color: #d4edda;
+            color: #155724;
+        }
+
+        .alert-error {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+    </style>
+</head>
+
+<body>
+    <header class="header">
+        <h1>问题管理系统</h1>
+        <div class="user-info">
+            {% if current_user.is_authenticated %}
+                <span>{{ current_user.name }}</span>
+                <span id="org-name"></span>
+                <a href="{{ url_for('main.logout') }}">退出</a>
+                
+            {% else %}
+                <a href="{{ url_for('main.login') }}">登录</a>
+            {% endif %}
+        </div>
+    </header>
+    <nav class="nav">
+        {% if current_user.is_authenticated %}
+            <li class="nav-item">
+                <a class="nav-link" href="{{ url_for('main.index') }}">首页</a>
+            </li>
+            <li class="nav-item">
+                <a href="{{ url_for('question.question_list') }}">问题列表</a>
+            </li>
+            <li class="nav-item">
+                <a href="{{ url_for('question.ask_question') }}">提问</a>
+            </li>
+            {% if current_user.is_admin %}
+            <li class="nav-item">
+                <a href="{{ url_for('main.admin') }}">人员管理</a>
+            </li>
+            {% endif %}
+            {% if current_user.is_e_admin or current_user.is_he_admin %}
+            <li class="nav-item">
+                <a href="{{ url_for('user.pending_users') }}">审批</a>
+            </li>
+            {% endif %}
+            {% if current_user.has_permission_level(3) %}
+            <li class="nav-item">
+                <a class="nav-link" href="{{ url_for('academic.org_api_config') }}">API配置</a>
+            </li>
+            {% endif %}
+            {% if current_user.is_convener %}
+            <li class="nav-item">
+                <a class="nav-link" href="{{ url_for('academic.org_config') }}">组织配置</a>
+            </li>
+            <li class="nav-item">
+                <a href="{{ url_for('user.my_org') }}">人员管理</a>
+             </li>
+            {% endif %}
+            {% if current_user.org_configs|length > 2 and current_user.org_configs[2].is_enabled %}
+            <li class="nav-item">
+                <!-- <a class="nav-link" href="{{ url_for('academic.students') }}">学生信息</a> -->
+            </li>
+            {% endif %}
+            {% if current_user.org_configs|length > 0 and current_user.org_configs[0].is_enabled %}
+            <li class="nav-item">
+                <!-- <a class="nav-link" href="{{ url_for('academic.papers') }}">论文</a> -->
+            </li>
+            {% endif %}
+            {% if current_user.org_configs|length > 1 and current_user.org_configs[1].is_enabled %}
+            {% if not current_user.is_convener and not current_user.is_admin %}
+            <li class="nav-item">
+                <a class="nav-link" href="{{ url_for('academic.courses') }}">课程</a>
+            </li>
+            {% endif %}
+            {% endif %}
+            {% if current_user.is_convener or current_user.is_admin %}
+            <li class="nav-item">
+                <a class="nav-link" href="{{ url_for('log.view_logs') }}">日志</a>
+            </li>
+            {% endif %}
+            {% if not current_user.is_convener and not current_user.is_admin %}
+            <li class="nav-item">
+                <a class="nav-link" href="{{ url_for('main.org_list') }}">组织列表</a>
+            </li>
+            {% endif %}
+            <li class="nav-item">
+                <a class="nav-link" href="{{ url_for('main.logout') }}">退出</a>
+            </li>
+        {% endif %}
+    </nav>
+    <div class="container">
+        {% with messages = get_flashed_messages() %}
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="alert alert-{{ message.category if message.category else 'success' }}">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+        {% block content %}{% endblock %}
+    </div>
+    {% block scripts %}{% endblock %}
+</body>
+
+</html>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        fetch('{{ url_for("user.user_org") }}')
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error("请求失败");
+                }
+                return response.json();
+            })
+            .then(data => {
+                console.log("用户组织信息：", data);
+                // 可根据 data 内容动态操作 DOM，例如：
+                document.getElementById('org-name').textContent = data.name;
+            })
+            .catch(error => {
+                console.error("获取用户组织信息时出错：", error);
+            });
+    });
+</script>

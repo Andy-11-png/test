@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+
+{% block title %}学生查询{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>学生查询</h2>
+    
+    <form method="POST" action="{{ url_for('academic.search_students_page') }}" id="searchForm">
+        <div id="dynamicForm">
+            {{ form_html|safe }}
+        </div>
+        
+        <button type="submit" class="btn btn-primary">查询</button>
+    </form>
+    
+    {% if result %}
+    <div class="mt-4">
+        <h3>查询结果</h3>
+        <div class="card">
+            <div class="card-body">
+                <pre>{{ result|tojson(indent=2) }}</pre>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+document.getElementById('searchForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    // 收集表单数据
+    const formData = {};
+    const formElements = this.elements;
+    for (let element of formElements) {
+        if (element.name && element.type !== 'submit') {
+            if (element.type === 'checkbox') {
+                formData[element.name] = element.checked;
+            } else {
+                formData[element.name] = element.value;
+            }
+        }
+    }
+    const searchData = {};
+    searchData['org_id'] = new URLSearchParams(window.location.search).get('org_id');
+    searchData['type'] = 2
+    // 发送转账请求
+    fetch('/academic/transform', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+        },
+        body: JSON.stringify(searchData)
+    })
+    .then(response => response.json())
+    .then(data => {
+        // 显示转账结果
+        const resultDiv = document.createElement('div');
+        resultDiv.className = 'mt-4';
+        resultDiv.innerHTML = `
+            <h3>转账结果</h3>
+            <div class="card">
+                <div class="card-body">
+                    <pre>${JSON.stringify(data, null, 2)}</pre>
+                </div>
+            </div>
+        `;
+        document.querySelector('.container').appendChild(resultDiv);
+        
+        if (data.error) {
+            alert(data.error + (data.detail ? '\n' + JSON.stringify(data.detail) : ''));
+            return; // 如果转账失败,不继续执行
+        }
+
+        // 转账成功后继续执行查询请求
+        formData['org_id'] = new URLSearchParams(window.location.search).get('org_id');
+        org_id = new URLSearchParams(window.location.search).get('org_id');
+        return fetch(`{{ url_for("academic.search_students_page") }}?org_id=${org_id}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(formData)
+        });
+    })
+    .then(response => {
+        if (!response) return; // 如果转账失败,response会是undefined
+        return response.json();
+    })
+    .then(data => {
+        if (!data) return; // 如果转账失败,data会是undefined
+        // 显示查询结果
+        const resultDiv = document.createElement('div');
+        resultDiv.className = 'mt-4';
+        resultDiv.innerHTML = `
+            <h3>查询结果</h3>
+            <div class="card">
+                <div class="card-body">
+                    <pre>${JSON.stringify(data, null, 2)}</pre>
+                </div>
+            </div>
+        `;
+        document.querySelector('.container').appendChild(resultDiv);
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('操作失败，请重试');
+    });
+});
+</script>
+{% endblock %} 

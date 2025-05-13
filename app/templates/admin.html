@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <h1>管理员面板</h1>
+    
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }}">{{ message }}</div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+    
+    <div class="card">
+        <div class="card-header">
+            <h2>批量导入管理员</h2>
+        </div>
+        <div class="card-body">
+            <form method="POST" enctype="multipart/form-data">
+                <div class="form-group">
+                    <label for="excel_file">选择Excel文件：</label>
+                    <input type="file" id="excel_file" name="excel_file" accept=".xlsx,.xls" required>
+                    <small class="form-text text-muted">
+                        请上传包含以下列的Excel文件：<br>
+                        - 邮箱：用户邮箱<br>
+                        - 角色：e-admin 或 he-admin
+                    </small>
+                </div>
+                <button type="submit" class="btn btn-primary">导入</button>
+            </form>
+        </div>
+    </div>
+    
+    <div class="card mt-4">
+        <div class="card-header">
+            <h2>下载模板</h2>
+        </div>
+        <div class="card-body">
+            <a href="{{ url_for('main.admin_template') }}" class="btn btn-secondary">下载Excel模板</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

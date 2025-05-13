@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="zh">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>待回答问题</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+
+<body>
+    <div class="container">
+        <h1>待回答问题</h1>
+        <nav>
+            <a href="{{ url_for('main.index') }}">首页</a>
+            <a href="{{ url_for('question.question_list') }}">问题列表</a>
+            <a href="{{ url_for('question.pending_questions') }}">待回答问题</a>
+            <a href="{{ url_for('main.logout') }}">退出</a>
+        </nav> {% with messages = get_flashed_messages() %} {% if messages %} {% for message in messages %} <div
+            class="alert">{{ message }}</div> {% endfor %} {% endif %} {% endwith %} <div class="question-list">
+            {% for question in questions %} <div class="question-item">
+                <h3>
+                    <a href="{{ url_for('question.view_question', question_id=question.id) }}"> {{ question.title }}
+                    </a>
+                </h3>
+                <div class="question-meta">
+                    <span>提问者：{{ question.asker_email }}</span>
+                    <span>角色：{{ question.asker_role }}</span>
+                    <span>提交时间：{{ question.submit_time.strftime('%Y-%m-%d %H:%M') }}</span>
+                </div>
+                <div class="question-content">
+                    <p>{{ question.description[:200] }}{% if question.description|length > 200 %}...{% endif %}</p>
+                </div>
+            </div> {% endfor %} </div>
+    </div>
+</body>
+
+</html>

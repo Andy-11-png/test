@@ -1,0 +1,190 @@
+{% extends "base.html" %} 
+{% block title %}{{ org.name }} - 用户管理{% endblock %} 
+{% block content %} 
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-8">
+            <h2>{{ org.name }} - 用户管理</h2>
+        </div>
+        <div class="col-md-4 text-end">
+            <a href="{{ url_for('user.org_detail', org_id=org.id) }}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> 返回组织详情 </a>
+        </div>
+    </div> 
+    {% with messages = get_flashed_messages(with_categories=true) %} 
+    {% if messages %}
+    {% for category, message in messages %} 
+    <div class="alert alert-{{ category }}">{{ message }}</div> 
+    {% endfor %}
+    {% endif %} 
+    {% endwith %} 
+    <div class="card mt-4">
+        <div class="card-header">
+            <h4>批量导入用户</h4>
+        </div>
+        <div class="card-body">
+            <form method="POST" action="{{ url_for('user.import_org_users', org_id=org.id) }}" enctype="multipart/form-data">
+                <div class="form-group">
+                    <label for="excel_file">选择Excel文件</label>
+                    <input type="file" class="form-control" id="excel_file" name="excel_file" accept=".xlsx,.xls" required>
+                    <small class="form-text text-muted"> 
+                        请上传包含用户信息的Excel文件，格式要求：<br> 
+                        1. 第一列：邮箱（必填）<br> 
+                        2. 第二列：姓名（必填）<br>
+                        3. 第三列：权限级别（必填，1-3）<br> 
+                        4. 第四列：登录密码（必填）<br>
+                        <br> 
+                        说明：<br> 
+                        - 所有用户将被设置为 default 角色<br> 
+                        - 用户将自动关联到当前组织<br> 
+                        - 如果邮箱已存在，将更新该用户在组织中的权限级别 
+                    </small>
+                </div>
+                <div class="mb-3">
+                    <a href="{{ url_for('user.download_org_user_template', org_id=org.id) }}" class="btn btn-secondary">
+                        <i class="fas fa-download"></i> 下载模板
+                    </a>
+                </div>
+                <button type="submit" class="btn btn-primary mt-3">导入用户</button>
+            </form>
+        </div>
+    </div>
+    <div class="card mt-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h4 class="mb-0">组织用户列表</h4>
+            <span class="badge bg-primary">{{ org_users|length }} 个用户</span>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="border-0">用户名</th>
+                            <th class="border-0">邮箱</th>
+                            <th class="border-0">权限级别</th>
+                            <th class="border-0">消费额度</th>
+                            <th class="border-0 text-end">操作</th>
+                        </tr>
+                    </thead>
+                    <tbody> 
+                    {% for org_user_data in org_users %} 
+                        {% if org_user_data.user.id != current_user.id %}
+                        <tr>
+                            <td class="align-middle">{{ org_user_data.user.name }}</td>
+                            <td class="align-middle">{{ org_user_data.user.email }}</td>
+                            <td class="align-middle"> 
+                                {% if org_user_data.active_level %}
+                                    {{ org_user_data.active_name }} ({{ org_user_data.active_level }}) 
+                                {% else %} 
+                                    未设置
+                                {% endif %} 
+                            </td>
+                            <td class="align-middle">
+                                <form action="{{ url_for('user.update_user_quota', org_id=org.id, user_id=org_user_data.user.id) }}" method="post" class="d-inline">
+                                    <div class="input-group input-group-sm" style="width: 200px;">
+                                        <input type="number" name="quota" class="form-control" value="{{ org_user_data.quota }}" min="0" step="1">
+                                        <button type="submit" class="btn btn-outline-primary">更新额度</button>
+                                    </div>
+                                </form>
+                            </td>
+                            <td class="align-middle text-end">
+                                <form action="{{ url_for('user.update_org_user', org_id=org.id, user_id=org_user_data.user.id) }}" method="post" class="d-inline">
+                                    <select name="active_level" class="form-control d-inline-block w-auto mr-2">
+                                        <option value="1" {% if org_user_data.active_level == 1 %}selected{% endif %}>权限级别1</option>
+                                        <option value="2" {% if org_user_data.active_level == 2 %}selected{% endif %}>权限级别2</option>
+                                        <option value="3" {% if org_user_data.active_level == 3 %}selected{% endif %}>权限级别3</option>
+                                    </select>
+                                    <button type="submit" class="btn btn-primary btn-sm">更新权限</button>
+                                </form>
+                                <form action="{{ url_for('user.remove_org_user', org_id=org.id, user_id=org_user_data.user.id) }}" method="post" class="d-inline ml-2">
+                                    <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('确定要移除该用户吗？')">移除</button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% endif %}
+                    {% endfor %} 
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+<style>
+    .container {
+        max-width: 1200px;
+    }
+
+    .card {
+        border: none;
+        box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+        border-radius: 0.5rem;
+    }
+
+    .card-header {
+        background-color: #f8f9fa;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.125);
+        padding: 1rem;
+    }
+
+    .card-body {
+        padding: 1rem;
+    }
+
+    .table {
+        margin-bottom: 0;
+    }
+
+    .table th {
+        font-weight: 600;
+        color: #495057;
+        background-color: #f8f9fa;
+        padding: 1rem;
+    }
+
+    .table td {
+        padding: 1rem;
+        vertical-align: middle;
+    }
+
+    .table tbody tr:hover {
+        background-color: #f8f9fa;
+    }
+
+    .btn-outline-primary {
+        border-color: #0d6efd;
+        color: #0d6efd;
+    }
+
+    .btn-outline-primary:hover {
+        background-color: #0d6efd;
+        color: white;
+    }
+
+    .btn-outline-danger {
+        border-color: #dc3545;
+        color: #dc3545;
+    }
+
+    .btn-outline-danger:hover {
+        background-color: #dc3545;
+        color: white;
+    }
+
+    .form-select {
+        border-radius: 0.25rem;
+        padding: 0.25rem 0.5rem;
+        min-width: 150px;
+    }
+
+    .badge {
+        font-size: 0.875rem;
+        padding: 0.35em 0.65em;
+        font-weight: 500;
+    }
+
+    .alert {
+        border-radius: 0.5rem;
+        margin-bottom: 1rem;
+    }
+</style> 
+{% endblock %}

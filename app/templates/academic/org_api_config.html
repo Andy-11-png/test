@@ -1,0 +1,143 @@
+{% extends "base.html" %}
+
+{% block title %}API配置{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>API配置</h2>
+    
+    <form method="POST" action="{{ url_for('academic.save_api_config') }}">
+        <div class="form-group">
+            <label for="feature_type">功能类型</label>
+            <select class="form-control" id="feature_type" name="feature_type" required>
+                <option value="">请选择功能类型</option>
+                <option value="0">学生认证</option>
+                <option value="1">学生查询</option>
+                <option value="2">论文搜索</option>
+                <option value="3">论文PDF获取</option>
+            </select>
+        </div>
+        
+        <div class="form-group">
+            <label for="api_url">API URL</label>
+            <input type="text" class="form-control" id="api_url" name="api_url" required>
+        </div>
+        
+        <div class="form-group">
+            <label for="api_path">API Path</label>
+            <input type="text" class="form-control" id="api_path" name="api_path" required>
+        </div>
+        
+        <div class="form-group">
+            <label for="method">请求方法</label>
+            <select class="form-control" id="method" name="method" required>
+                <option value="POST">POST</option>
+                <option value="GET">GET</option>
+            </select>
+        </div>
+        
+        <div class="form-group">
+            <label for="service_price">服务价格</label>
+            <input type="number" class="form-control" id="service_price" name="service_price" min="0" step="1">
+            <small class="form-text text-muted">请输入服务价格（整数）</small>
+        </div>
+        
+        <div class="form-group">
+            <label for="input_schema">输入Schema</label>
+            <textarea class="form-control" id="input_schema" name="input_schema" rows="5" required></textarea>
+        </div>
+        
+        <div class="form-group">
+            <label for="output_schema">输出Schema</label>
+            <textarea class="form-control" id="output_schema" name="output_schema" rows="5" required></textarea>
+        </div>
+        
+        <button type="submit" class="btn btn-primary">保存</button>
+    </form>
+</div>
+
+<script>
+(function() {
+    const featureTypeSelect = document.getElementById('feature_type');
+    const apiUrlInput = document.getElementById('api_url');
+    const apiPathInput = document.getElementById('api_path');
+    const methodSelect = document.getElementById('method');
+    const servicePriceInput = document.getElementById('service_price');
+    const inputSchemaTextarea = document.getElementById('input_schema');
+    const outputSchemaTextarea = document.getElementById('output_schema');
+    
+    // 初始化已有配置
+    const configs = {{ configs|tojson|safe }};
+    
+    function clearForm() {
+        apiUrlInput.value = '';
+        apiPathInput.value = '';
+        methodSelect.value = 'POST';
+        servicePriceInput.value = '';
+        inputSchemaTextarea.value = '{}';
+        outputSchemaTextarea.value = '{}';
+    }
+    
+    function formatJsonSchema(schema) {
+        if (!schema) return '{}';
+        try {
+            return JSON.stringify(JSON.parse(schema), null, 2);
+        } catch (e) {
+            console.error('Error formatting JSON:', e);
+            return schema;
+        }
+    }
+    
+    // 根据功能类型更新表单字段的显示状态
+    function updateFormFields(featureType) {
+        // 获取服务价格表单组元素
+        const servicePriceGroup = document.getElementById('service_price').closest('.form-group');
+        
+        // 当选择论文搜索(值为2)时隐藏服务价格
+        if (featureType === '2') {
+            servicePriceGroup.style.display = 'none';
+            // 隐藏时设置默认值为0
+            servicePriceInput.value = '0';
+        } else {
+            servicePriceGroup.style.display = 'block';
+        }
+    }
+    
+    function loadConfig(featureType) {
+        const config = configs[featureType];
+        if (config) {
+            apiUrlInput.value = config.api_url || '';
+            apiPathInput.value = config.api_path || '';
+            methodSelect.value = config.method || 'POST';
+            servicePriceInput.value = config.service_price || '';
+            inputSchemaTextarea.value = formatJsonSchema(config.input_schema);
+            outputSchemaTextarea.value = formatJsonSchema(config.output_schema);
+        } else {
+            clearForm();
+        }
+        
+        // 调用新函数更新字段可见性
+        updateFormFields(featureType);
+    }
+    
+    // 当选择功能类型时加载配置
+    featureTypeSelect.addEventListener('change', function() {
+        const featureType = this.value;
+        if (!featureType) {
+            clearForm();
+            return;
+        }
+        loadConfig(featureType);
+    });
+    
+    // 页面加载时，如果有默认选中的功能类型，加载其配置
+    const defaultFeatureType = featureTypeSelect.value;
+    if (defaultFeatureType) {
+        loadConfig(defaultFeatureType);
+    } else {
+        // 确保即使没有默认选择也调用一次更新函数
+        updateFormFields('');
+    }
+})();
+</script>
+{% endblock %} 

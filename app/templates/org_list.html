@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+
+{% block title %}组织列表{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row">
+        <div class="col-12">
+            <h2 class="mb-4">组织列表</h2>
+            <div class="row">
+                {% for org in orgs %}
+                <div class="col-md-4 mb-4">
+                    <div class="card">
+                        <div class="card-body">
+                            <h5 class="card-title">{{ org.name }}</h5>
+                            <p class="card-text">{{ org.description }}</p>
+                            <a href="{{ url_for('main.org_services', org_id=org.id) }}" class="btn btn-primary">查看服务</a>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

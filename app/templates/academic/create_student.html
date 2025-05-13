@@ -1,0 +1,40 @@
+{% extends "base.html" %} {% block title %}创建学生信息{% endblock %} {% block content %} <div class="container mt-4">
+    <div class="row">
+        <div class="col-12">
+            <h2>创建学生信息</h2> {% with messages = get_flashed_messages(with_categories=true) %} {% if messages %}
+            {% for category, message in messages %} <div class="alert alert-{{ category }}">{{ message }}</div>
+            {% endfor %} {% endif %} {% endwith %}
+        </div>
+    </div>
+    <div class="card mt-4">
+        <div class="card-body">
+            <form method="POST">
+                <div class="mb-3">
+                    <label for="name" class="form-label">学生姓名</label>
+                    <input type="text" class="form-control" id="name" name="name" required>
+                </div>
+                <div class="mb-3">
+                    <label for="in_year" class="form-label">入学年份</label>
+                    <input type="text" class="form-control" id="in_year" name="in_year" required>
+                </div>
+                <div class="mb-3">
+                    <label for="out_year" class="form-label">毕业年份</label>
+                    <input type="text" class="form-control" id="out_year" name="out_year" required>
+                </div>
+                <div class="mb-3">
+                    <label for="gpa" class="form-label">GPA</label>
+                    <input type="text" class="form-control" id="gpa" name="gpa" required>
+                </div>
+                <div class="mb-3">
+                    <label for="price" class="form-label">所需积分</label>
+                    <input type="number" class="form-control" id="price" name="price" min="0" value="0" required>
+                    <div class="form-text">设置用户查看此学生信息所需的积分数量</div>
+                </div>
+                <div class="mb-3">
+                    <button type="submit" class="btn btn-primary">创建</button>
+                    <a href="{{ url_for('academic.students') }}" class="btn btn-secondary">返回</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div> {% endblock %}

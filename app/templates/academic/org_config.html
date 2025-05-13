@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}组织配置{% endblock %}
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">组织功能配置</h3>
+                </div>
+                <div class="card-body">
+                    {% with messages = get_flashed_messages(with_categories=true) %}
+                        {% if messages %}
+                            {% for category, message in messages %}
+                                <div class="alert alert-{{ category }}">{{ message }}</div>
+                            {% endfor %}
+                        {% endif %}
+                    {% endwith %}
+
+                    <form method="POST">
+                        <div class="mb-3">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="papers" name="papers" 
+                                    {% if configs[0].is_enabled %}checked{% endif %}>
+                                <label class="form-check-label" for="papers">论文功能</label>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="courses" name="courses"
+                                    {% if configs[1].is_enabled %}checked{% endif %}>
+                                <label class="form-check-label" for="courses">课程功能</label>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="verify" name="verify"
+                                    {% if configs[2].is_enabled %}checked{% endif %}>
+                                <label class="form-check-label" for="verify">学生认证</label>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="search" name="search"
+                                    {% if configs[3].is_enabled %}checked{% endif %}>
+                                <label class="form-check-label" for="search">学生搜索</label>
+                            </div>
+                        </div>
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-primary">保存配置</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

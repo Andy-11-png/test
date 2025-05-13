@@ -1,0 +1,14 @@
+{% extends "base.html" %} {% block title %}问题列表{% endblock %} {% block content %} <div class="question-list">
+    {% for question in questions %} <div class="question-item">
+        <h3>
+            <a href="{{ url_for('question.view_question', question_id=question.id) }}"> {{ question.title }} </a>
+        </h3>
+        <div class="question-meta">
+            <span>提问者：{{ question.asker_email }}</span>
+            <span>角色：{{ question.asker_role }}</span>
+            <span>提交时间：{{ question.submit_time.strftime('%Y-%m-%d %H:%M') }}</span>
+            <span class="status {{ question.status }}">{{ question.status }}</span>
+        </div> {% if question.answer_time %} <div class="answer-meta">
+            <span>回答时间：{{ question.answer_time.strftime('%Y-%m-%d %H:%M') }}</span>
+        </div> {% endif %}
+    </div> {% endfor %} </div> {% endblock %}

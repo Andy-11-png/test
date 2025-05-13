@@ -1,0 +1,252 @@
+{% extends "base.html" %}
+
+{% block title %}论文管理{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>论文管理</h2>
+    
+    <!-- 搜索表单 -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form id="searchForm">
+                {{ form_html|safe }}
+                <button type="submit" class="btn btn-primary">搜索</button>
+            </form>
+        </div>
+    </div>
+    
+    <!-- 论文列表 -->
+    <div class="card">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>标题</th>
+                            <th>摘要</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="papersTable">
+                        <!-- 论文列表将通过JavaScript动态加载 -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// 搜索论文
+document.getElementById('searchForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    // 清空之前的搜索结果
+    document.getElementById('papersTable').innerHTML = '<tr><td colspan="3" class="text-center">正在搜索...</td></tr>';
+    
+    // 检查组织余额
+    fetch('/academic/check_balance')
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                alert(data.error);
+                document.getElementById('papersTable').innerHTML = '<tr><td colspan="3" class="text-center">搜索失败: ' + data.error + '</td></tr>';
+                return;
+            }
+            
+            // 收集表单数据
+            const formData = new FormData(this);
+            const searchData = {};
+            for (let [key, value] of formData.entries()) {
+                if (value.trim()) {  // 只添加非空值
+                    searchData[key] = value.trim();
+                }
+            }
+
+            // 确保至少有一个搜索条件
+            if (Object.keys(searchData).length === 0) {
+                alert('请输入至少一个搜索条件');
+                document.getElementById('papersTable').innerHTML = '<tr><td colspan="3" class="text-center">请输入搜索条件</td></tr>';
+                return;
+            }
+            
+            console.log('搜索条件:', searchData);
+            searchData['org_id'] = new URLSearchParams(window.location.search).get('org_id');
+            // 发送搜索请求
+            fetch('/academic/search_papers', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify(searchData)
+            })
+            .then(response => {
+                console.log('Response Status:', response.status);
+                return response.json();
+            })
+            .then(data => {
+                if (data.error) {
+                    console.error('搜索错误:', data.error);
+                    document.getElementById('papersTable').innerHTML = '<tr><td colspan="3" class="text-center">搜索失败: ' + data.error + '</td></tr>';
+                    return;
+                }
+                
+                console.log('搜索结果:', data);
+                
+                // 显示搜索结果
+                const papersTable = document.getElementById('papersTable');
+                papersTable.innerHTML = '';
+                
+                // 处理API返回的数据 - API直接返回论文数组
+                if (Array.isArray(data) && data.length > 0) {
+                    // 遍历论文数组
+                    data.forEach(paper => {
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td>${paper.title || '未知标题'}</td>
+                            <td>${paper.abstract || '无摘要'}</td>
+                            <td>
+                                <button class="btn btn-primary btn-sm" onclick="downloadPaper('${paper.title}')">
+                                    下载PDF
+                                </button>
+                            </td>
+                        `;
+                        papersTable.appendChild(row);
+                    });
+                } else if (typeof data === 'object' && data.title) {
+                    // 处理单个论文对象
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${data.title || '未知标题'}</td>
+                        <td>${data.abstract || '无摘要'}</td>
+                        <td>
+                            <button class="btn btn-primary btn-sm" onclick="downloadPaper('${data.title}')">
+                                下载PDF
+                            </button>
+                        </td>
+                    `;
+                    papersTable.appendChild(row);
+                } else {
+                    // 未找到论文
+                    papersTable.innerHTML = '<tr><td colspan="3" class="text-center">未找到相关论文</td></tr>';
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                document.getElementById('papersTable').innerHTML = '<tr><td colspan="3" class="text-center">搜索失败，请重试</td></tr>';
+                alert('搜索失败，请重试');
+            });
+        })
+        .catch(error => {
+            console.error('Error checking balance:', error);
+            document.getElementById('papersTable').innerHTML = '<tr><td colspan="3" class="text-center">检查余额失败，请重试</td></tr>';
+            alert('检查余额失败，请重试');
+        });
+});
+
+// 下载论文
+// 下载论文
+function downloadPaper(title) {
+    // 检查组织余额
+    fetch('/academic/check_balance')
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                alert(data.error);
+                return;
+            }
+            
+            // 发送下载请求
+            fetch('/academic/download_paper', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify({ title: title, org_id :  new URLSearchParams(window.location.search).get('org_id') })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    alert(data.error);
+                    return;
+                }
+                
+                if (data.pdf_url) {
+                    // 创建下载链接
+                    const link = document.createElement('a');
+                    link.href = data.pdf_url;
+                    link.download = data.filename || `${title}.pdf`;
+                    link.click();
+                } else if (data.content) {
+                    // 如果返回的是PDF内容，创建Blob对象下载
+                    const blob = new Blob([data.content], { type: data.content_type || 'application/pdf' });
+                    const url = window.URL.createObjectURL(blob);
+                    const link = document.createElement('a');
+                    link.href = url;
+                    link.download = data.filename || `${title}.pdf`;
+                    link.click();
+                    window.URL.revokeObjectURL(url);
+                } else {
+                    alert('未找到PDF文件');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('下载失败，请重试');
+            });
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('检查余额失败，请重试');
+        });
+}
+
+// 搜索论文
+function searchPapers() {
+    console.log(new URLSearchParams(window.location.search).get('org_id'))
+
+    const keywords = document.getElementById('search-input').value.trim();
+    if (!keywords) {
+        alert('请输入搜索关键词');
+        return;
+    }
+    
+    // 清空之前的结果
+    document.getElementById('papers-list').innerHTML = '';
+    
+    // 显示加载状态
+    document.getElementById('loading').style.display = 'block';
+    
+    // 发送搜索请求
+    fetch('/academic/search_papers', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+        },
+        body: JSON.stringify({ keywords: keywords, })
+    })
+    .then(response => response.json())
+    .then(data => {
+        // 隐藏加载状态
+        document.getElementById('loading').style.display = 'none';
+        
+        if (data.error) {
+            alert(data.error);
+            return;
+        }
+        
+        // 显示搜索结果
+        displayPapers(data);
+    })
+    .catch(error => {
+        document.getElementById('loading').style.display = 'none';
+        console.error('Error:', error);
+        alert('搜索失败，请重试');
+    });
+}
+</script>
+{% endblock %}

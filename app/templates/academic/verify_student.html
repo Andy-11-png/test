@@ -1,0 +1,164 @@
+{% extends "base.html" %}
+
+{% block title %}学生认证{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>学生认证</h2>
+    
+    <!-- 注意：不使用AJAX，让表单自然提交 -->
+    <form id="verifyForm" method="POST" enctype="multipart/form-data">
+        <div id="dynamicForm">
+            {{ form_html|safe }}
+        </div>
+        
+        <!-- 确保有必填字段 -->
+        <div id="requiredFields">
+            <!-- 只在需要时显示这些字段 -->
+        </div>
+        
+        <button type="submit" class="btn btn-primary">认证</button>
+    </form>
+    
+    <div id="result" class="mt-4" style="display: none;">
+        <h3>认证结果</h3>
+        <div class="card">
+            <div class="card-body">
+                <pre id="resultContent"></pre>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// 页面加载时检查表单
+document.addEventListener('DOMContentLoaded', function() {
+    // 检查动态表单是否已包含id和name字段
+    const hasIdField = document.querySelector('#dynamicForm input[name="id"]') !== null;
+    const hasNameField = document.querySelector('#dynamicForm input[name="name"]') !== null;
+    
+    const requiredFields = document.getElementById('requiredFields');
+    
+    // 仅在缺少字段时添加
+    if (!hasIdField) {
+        const idFieldHTML = `
+            <div class="form-group">
+                <label for="additional_id">学生ID</label>
+                <input type="text" class="form-control" id="additional_id" name="id" required>
+            </div>
+        `;
+        requiredFields.innerHTML += idFieldHTML;
+    }
+    
+    if (!hasNameField) {
+        const nameFieldHTML = `
+            <div class="form-group">
+                <label for="additional_name">学生姓名</label>
+                <input type="text" class="form-control" id="additional_name" name="name" required>
+            </div>
+        `;
+        requiredFields.innerHTML += nameFieldHTML;
+    }
+    
+    // 监听表单提交，但使用传统表单提交方式
+    document.getElementById('verifyForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        // 收集表单数据
+        const formData = new FormData(this); // 使用FormData而不是JSON
+        let hasError = false;
+        
+        // 验证必填字段
+        for (let element of this.elements) {
+            if (element.name && element.type !== 'submit') {
+                if (element.name.endsWith('_base64')) {
+                    continue; // 跳过base64隐藏字段
+                } else if (element.type !== 'file' && !element.value.trim()) {
+                    alert(`请填写${element.name}`);
+                    hasError = true;
+                    break;
+                } else if (element.type === 'file' && !element.files.length) {
+                    alert(`请上传${element.name}`);
+                    hasError = true;
+                    break;
+                }
+            }
+        }
+        
+        if (hasError) {
+            return;
+        }
+        const searchData = {};
+        searchData['org_id'] = new URLSearchParams(window.location.search).get('org_id');
+        searchData['type'] = 0
+                // 发送搜索请求
+                fetch('/academic/transform', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify(searchData)
+                })
+                .then(response => response.json())
+                .then(data => {
+                    // 显示转账结果
+                    const resultDiv = document.createElement('div');
+                    resultDiv.className = 'mt-4';
+                    resultDiv.innerHTML = `
+                        <h3>转账结果</h3>
+                        <div class="card">
+                            <div class="card-body">
+                                <pre>${JSON.stringify(data, null, 2)}</pre>
+                            </div>
+                        </div>
+                    `;
+                    document.querySelector('.container').appendChild(resultDiv);
+                    
+                    if (data.error) {
+                        alert(data.error + (data.detail ? '\n' + JSON.stringify(data.detail) : ''));
+                        return; // 如果转账失败,不继续执行
+                    }
+                    
+                    // 转账成功后继续执行认证请求
+                    formData['org_id'] = new URLSearchParams(window.location.search).get('org_id');
+                    org_id = new URLSearchParams(window.location.search).get('org_id');
+                    console.log(formData);
+                    return fetch(`{{ url_for("academic.verify_student_page") }}?org_id=${org_id}`, {
+                        method: 'POST',
+                        body: formData // 直接发送FormData，不设置Content-Type
+                    });
+                })
+                .then(response => {
+                    if (!response) return; // 如果转账失败,response会是undefined
+                    console.log('Response Status:', response.status);
+                    console.log('Response Headers:', response.headers);
+                    return response.json();
+                })
+                .then(data => {
+                    if (!data) return; // 如果转账失败,data会是undefined
+                    // 显示认证结果
+                    const resultDiv = document.createElement('div');
+                    resultDiv.className = 'mt-4';
+                    resultDiv.innerHTML = `
+                        <h3>认证结果</h3>
+                        <div class="card">
+                            <div class="card-body">
+                                <pre>${JSON.stringify(data, null, 2)}</pre>
+                            </div>
+                        </div>
+                    `;
+                    document.querySelector('.container').appendChild(resultDiv);
+                    
+                    if (data.error) {
+                        alert(data.error + (data.detail ? '\n' + JSON.stringify(data.detail) : ''));
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('操作失败，请重试');
+                });
+    });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+
+{% block title %}注册{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="text-center">注册</h3>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="{{ url_for('main.register') }}" enctype="multipart/form-data">
+                        <div class="form-group mb-4">
+                            <label for="bank_pdf">信息PDF文件</label>
+                            <input type="file" class="form-control" id="bank_pdf" name="bank_pdf" accept=".pdf" required>
+                            <small class="form-text text-muted">
+                                请上传包含以下信息的PDF文件：<br>
+                                - 银行名称<br>
+                                - 银行账号<br>
+                                - 银行密码<br>
+                                - 用户姓名<br>
+                                - 用户邮箱<br>
+                                - 用户密码<br>
+                                - 组织名称
+                            </small>
+                        </div>
+                        <div class="alert alert-info">
+                            <small>所有用户和组织信息将从PDF文件中自动提取，无需手动输入。请确保PDF文件包含所有必要信息，并按照正确的格式标注（例如"姓名: 张三"）。</small>
+                        </div>
+                        <div class="form-group mt-4">
+                            <button type="submit" class="btn btn-primary btn-block w-100">注册</button>
+                        </div>
+                        <div class="form-group text-center mt-3">
+                            <a href="{{ url_for('auth.login') }}" class="btn btn-outline-secondary btn-block w-100">已有账号？去登录</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,146 @@
+{% extends "base.html" %} {% block title %}{{ question.title }}{% endblock %} {% block content %} <div
+    class="question-detail">
+    <h2>{{ question.title }}</h2>
+    <div class="question-meta">
+        <span>提问者：{{ question.asker_email }}</span>
+        <span>角色：{{ question.asker_role }}</span>
+        <span>提交时间：{{ question.submit_time.strftime('%Y-%m-%d %H:%M') }}</span>
+        <span class="status {{ question.status }}">{{ question.status }}</span>
+    </div>
+    <div class="question-content">
+        <h3>问题描述</h3>
+        <p>{{ question.description }}</p>
+    </div> {% if question.answer %} <div class="answer-content">
+        <h3>回答</h3>
+        <p>{{ question.answer }}</p>
+        <div class="answer-meta">
+            <span>回答时间：{{ question.answer_time.strftime('%Y-%m-%d %H:%M') }}</span> {% if question.admin %}
+            <span>回答者：{{ question.admin.name }}</span> {% endif %}
+        </div>
+    </div> {% elif current_user.is_admin %} <div class="answer-form">
+        <h3>回答问题</h3>
+        <form action="{{ url_for('question.answer_question', question_id=question.id) }}" method="post">
+            <div class="form-group">
+                <label for="answer">回答内容：</label>
+                <textarea id="answer" name="answer" rows="10" required placeholder="请输入您的回答内容..."></textarea>
+            </div>
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary">提交回答</button>
+                <a href="{{ url_for('question.question_list') }}" class="btn btn-secondary">返回列表</a>
+            </div>
+        </form>
+    </div> {% endif %}
+</div>
+<style>
+    .question-detail {
+        background: white;
+        padding: 2rem;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    .question-meta {
+        color: #666;
+        margin: 1rem 0;
+    }
+
+    .question-meta span {
+        margin-right: 1rem;
+    }
+
+    .status {
+        padding: 0.25rem 0.5rem;
+        border-radius: 4px;
+        font-size: 0.875rem;
+    }
+
+    .status.pending {
+        background-color: #fff3cd;
+        color: #856404;
+    }
+
+    .status.answered {
+        background-color: #d4edda;
+        color: #155724;
+    }
+
+    .question-content,
+    .answer-content {
+        margin: 2rem 0;
+    }
+
+    .answer-content {
+        background-color: #f8f9fa;
+        padding: 1.5rem;
+        border-radius: 4px;
+    }
+
+    .answer-meta {
+        color: #666;
+        margin-top: 1rem;
+        font-size: 0.875rem;
+    }
+
+    .answer-form {
+        margin-top: 2rem;
+        padding-top: 2rem;
+        border-top: 1px solid #eee;
+    }
+
+    .form-group {
+        margin-bottom: 1.5rem;
+    }
+
+    .form-group label {
+        display: block;
+        margin-bottom: 0.5rem;
+        font-weight: bold;
+    }
+
+    textarea {
+        width: 100%;
+        padding: 0.75rem;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        resize: vertical;
+        font-size: 1rem;
+        line-height: 1.5;
+    }
+
+    textarea:focus {
+        outline: none;
+        border-color: #80bdff;
+        box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, .25);
+    }
+
+    .form-actions {
+        display: flex;
+        gap: 1rem;
+    }
+
+    .btn {
+        padding: 0.5rem 1rem;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 1rem;
+    }
+
+    .btn-primary {
+        background-color: #007bff;
+        color: white;
+    }
+
+    .btn-primary:hover {
+        background-color: #0056b3;
+    }
+
+    .btn-secondary {
+        background-color: #6c757d;
+        color: white;
+    }
+
+    .btn-secondary:hover {
+        background-color: #5a6268;
+    }
+</style> {% endblock %}

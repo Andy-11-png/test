@@ -1,0 +1,7 @@
+{% extends "base.html" %} {% block title %}首页{% endblock %} {% block content %} <div class="welcome">
+    <h2>欢迎使用E-DBA系统</h2> {% if current_user.is_authenticated %} <p>这是一个用于教务管理的系统。您可以根据权限使用以下服务：</p>
+    <ul>
+        <li>访问论文信息</li>
+        <li>访问学生信息</li><li>访问课程信息</li> {% if current_user.is_admin %} <li>回答待处理的问题</li> {% endif %}
+    </ul> {% else %} <p>请先<a href="{{ url_for('main.login') }}">登录</a>以使用系统功能</p> {% endif %}
+</div> {% endblock %}
