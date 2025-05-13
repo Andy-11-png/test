@@ -35,11 +35,13 @@ def create_app(config_class=Config):
     app.config['MAIL_PASSWORD'] = 'udoo quxh yigu zxin'     # 替换为你的应用专用密码
     app.config['MAIL_DEFAULT_SENDER'] = 'andy20040115@gmail.com'  # 替换为你的Gmail邮箱
     
-
     # 照片文件夹配置
     app.config['UPLOAD_FOLDER'] = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'uploads')
     os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)# 确保目录存在
-
+    
+    # PDF上传配置
+    app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 限制上传文件大小为16MB
+    app.config['ALLOWED_EXTENSIONS'] = {'pdf'}
 
     # 初始化数据库
     db.init_app(app)
@@ -94,6 +96,7 @@ def create_app(config_class=Config):
     from app.controllers.academic_controller import bp as academic_bp
     from app.controllers.log_controller import bp as log_bp
     from app.controllers.auth import bp as auth_bp
+    from app.controllers.policy_controller import policy_bp
     
     app.register_blueprint(main_bp)
     app.register_blueprint(question_bp, url_prefix='/questions')
@@ -102,6 +105,7 @@ def create_app(config_class=Config):
     app.register_blueprint(academic_bp, url_prefix='/academic')
     app.register_blueprint(log_bp, url_prefix='/logs')
     app.register_blueprint(auth_bp, url_prefix='/auth')
+    app.register_blueprint(policy_bp, url_prefix='/policies')
     
     @app.context_processor
     def inject_user():

@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>政策列表</h2>
+        {% if current_user.is_he_admin or current_user.is_e_admin %}
+        <a href="{{ url_for('policy.create') }}" class="btn btn-primary">
+            添加新政策
+        </a>
+        {% endif %}
+    </div>
+    
+    <div class="row">
+        {% for policy in policies %}
+        <div class="col-md-6 mb-4">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">{{ policy.title }}</h5>
+                    <p class="card-text">{{ policy.content[:200] }}...</p>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <a href="{{ url_for('policy.view_policy', policy_id=policy.id) }}" class="btn btn-info">查看详情</a>
+                        {% if current_user.is_he_admin or current_user.is_e_admin %}
+                        <div>
+                            <a href="{{ url_for('policy.edit', policy_id=policy.id) }}" class="btn btn-warning">编辑</a>
+                            <button class="" onclick="deletePolicy({{ policy.id }})">删除</button>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function deletePolicy(policyId) {
+    if (confirm('确定要删除这条政策吗？')) {
+        fetch(`/policies/api/policies/${policyId}`, {
+            method: 'DELETE'
+        })
+        .then(response => response.json())
+        .then(data => {
+            location.reload();
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('删除失败，请重试');
+        });
+    }
+}
+</script>
+{% endblock %} 

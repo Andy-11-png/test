@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h2>{{ policy.title }}</h2>
+            <div>
+                {% if current_user.is_admin %}
+                <a href="{{ url_for('policy.edit', policy_id=policy.id) }}" class="btn btn-warning">编辑</a>
+                <button class="btn btn-danger" onclick="deletePolicy({{ policy.id }})">删除</button>
+                {% endif %}
+                <a href="{{ url_for('policy.list') }}" class="btn btn-secondary">返回列表</a>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="mb-3">
+                <h5>政策内容：</h5>
+                <div class="policy-content">
+                    {{ policy.content | safe }}
+                </div>
+            </div>
+            {% if policy.pdf_path %}
+            <div class="mb-3">
+                <h5>原始PDF文件：</h5>
+                <a href="{{ url_for('static', filename=policy.pdf_path) }}" class="btn btn-info" target="_blank">
+                    查看PDF文件
+                </a>
+            </div>
+            {% endif %}
+            <div class="text-muted">
+                <small>创建时间：{{ policy.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</small>
+                <br>
+                <small>最后更新：{{ policy.updated_at.strftime('%Y-%m-%d %H:%M:%S') }}</small>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function deletePolicy(policyId) {
+    if (confirm('确定要删除这条政策吗？')) {
+        fetch(`/policies/api/policies/${policyId}`, {
+            method: 'DELETE'
+        })
+        .then(response => response.json())
+        .then(data => {
+            window.location.href = "{{ url_for('policy.list') }}";
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('删除失败，请重试');
+        });
+    }
+}
+</script>
+{% endblock %} 

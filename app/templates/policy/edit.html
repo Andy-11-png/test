@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="card">
+        <div class="card-header">
+            <h3>{% if policy %}编辑政策{% else %}添加新政策{% endif %}</h3>
+        </div>
+        <div class="card-body">
+            <form id="policyForm" enctype="multipart/form-data">
+                <div class="mb-3">
+                    <label for="title" class="form-label">政策标题</label>
+                    <input type="text" class="form-control" id="title" name="title" value="{{ policy.title if policy else '' }}" required>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="pdf_file" class="form-label">PDF文件</label>
+                    {% if policy and policy.pdf_path %}
+                    <div class="mb-2">
+                        <a href="{{ url_for('static', filename=policy.pdf_path) }}" target="_blank">查看当前PDF文件</a>
+                    </div>
+                    {% endif %}
+                    <input type="file" class="form-control" id="pdf_file" name="pdf_file" accept=".pdf" {% if not policy %}required{% endif %}>
+                </div>
+
+                <button type="button" class="btn btn-primary" onclick="submitForm()">保存</button>
+                <a href="{{ url_for('policy.list') }}" class="btn btn-secondary">返回</a>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function submitForm() {
+    const form = document.getElementById('policyForm');
+    const formData = new FormData(form);
+    
+    const url = "{{ url_for('policy.get_policies') if not policy else url_for('policy.get_policy', policy_id=policy.id) }}";
+    const method = "{{ 'POST' if not policy else 'PUT' }}";
+    
+    fetch(url, {
+        method: method,
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.error) {
+            alert(data.error);
+        } else {
+            window.location.href = '{{ url_for("policy.list") }}';
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('保存失败，请重试');
+    });
+}
+</script>
+{% endblock %} 
