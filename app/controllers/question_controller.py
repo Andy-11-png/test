@@ -29,7 +29,7 @@ def ask_question():
             title=title,
             description=description,
             asker_email=current_user.email,
-            asker_role=next((ur.role.name for ur in current_user.user_roles), '未知'),
+            asker_role=next((ur.role.name for ur in current_user.user_roles), '默认'),
             submit_time=datetime.now(),
             status='待回答'
         )
