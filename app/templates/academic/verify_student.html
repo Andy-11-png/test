@@ -234,7 +234,11 @@ document.addEventListener('DOMContentLoaded', function() {
             if (data.error) {
                 throw new Error(data.error);
             }
-            return processBatchVerification(data.students);
+            // 检查返回的数据结构
+            if (!data.results || !Array.isArray(data.results)) {
+                throw new Error('服务器返回的数据格式不正确');
+            }
+            return processBatchVerification(data.results);
         })
         .catch(error => {
             console.error('Error:', error);
@@ -244,56 +248,23 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     // 处理批量认证
-    async function processBatchVerification(students) {
+    async function processBatchVerification(results) {
         const progressBar = document.querySelector('.progress-bar');
         const progressLog = document.getElementById('progressLog');
-        const total = students.length;
+        const total = results.length;
         let completed = 0;
 
-        for (let i = 0; i < students.length; i++) {
-            const student = students[i];
+        for (let i = 0; i < results.length; i++) {
+            const result = results[i];
             try {
                 // 显示当前进度
                 progressBar.style.width = `${(completed / total) * 100}%`;
-                progressLog.innerHTML += `<div>正在处理第 ${i + 1} 条记录：${student.id} - ${student.name}</div>`;
+                progressLog.innerHTML += `<div>正在处理第 ${i + 1} 条记录：${result.student_id} - ${result.student_name}</div>`;
                 progressLog.scrollTop = progressLog.scrollHeight;
 
-                // 发送转账请求
-                const searchData = {
-                    'org_id': new URLSearchParams(window.location.search).get('org_id'),
-                    'type': 0
-                };
-
-                const transferResponse = await fetch('/academic/transform', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Accept': 'application/json'
-                    },
-                    body: JSON.stringify(searchData)
-                });
-
-                const transferData = await transferResponse.json();
-                if (transferData.error) {
-                    throw new Error(transferData.error);
-                }
-
-                // 发送认证请求
-                const verifyData = new FormData();
-                verifyData.append('id', student.id);
-                verifyData.append('name', student.name);
-                verifyData.append('org_id', new URLSearchParams(window.location.search).get('org_id'));
-
-                const verifyResponse = await fetch(`{{ url_for("academic.verify_student_page") }}?org_id=${new URLSearchParams(window.location.search).get('org_id')}`, {
-                    method: 'POST',
-                    body: verifyData
-                });
-
-                const verifyResult = await verifyResponse.json();
-                
                 // 更新进度日志
-                if (verifyResult.error) {
-                    progressLog.innerHTML += `<div class="text-danger">第 ${i + 1} 条：认证失败 - ${verifyResult.error}</div>`;
+                if (result.status === 'error') {
+                    progressLog.innerHTML += `<div class="text-danger">第 ${i + 1} 条：认证失败 - ${result.message}</div>`;
                 } else {
                     progressLog.innerHTML += `<div class="text-success">第 ${i + 1} 条：认证成功</div>`;
                 }

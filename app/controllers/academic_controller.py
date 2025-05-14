@@ -1065,8 +1065,8 @@ def batch_verify_students():
             try:
                 # 准备请求数据
                 data = {
-                    'student_id': student['id'],
-                    'student_name': student['name']
+                    'id': student['id'],
+                    'name': student['name']
                 }
                 
                 logger.info(f"发送请求到API: {url}")
