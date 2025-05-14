@@ -6,8 +6,7 @@ input: {
 "bank": "string",
 "account_name": "string",
 "account_number": "string",
-"password": "string",
-"password1": "1111string"
+"password": "string"
 }
 output: {"status":"success"}/{"status":"fail"}
 

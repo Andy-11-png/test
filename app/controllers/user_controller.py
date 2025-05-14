@@ -464,6 +464,8 @@ def import_org_users(org_id):
                 
                 if active.lv >=2 :
                   totalMoney+=privateMoney
+                
+                success_count += 1
                
             except Exception as e:
                 logger.error(f"Error processing user {email}: {str(e)}")
@@ -477,7 +479,11 @@ def import_org_users(org_id):
         logger.error(f"Error importing users: {str(e)}")
         flash(f'导入失败：{str(e)}', 'error')
     oorg = Org.query.filter_by(id=0).first()
-    trans_money(org, oorg, totalMoney)
+    b = trans_money(org, oorg, totalMoney)
+    if b:
+        flash(f'转账完成：成功 {success_count} 条，失败 {error_count} 条', 'success' if success_count > 0 else 'warning')
+    else:
+        flash(f'转账失败：{b}', 'error')
     return redirect(url_for('user.org_users', org_id=org_id))
 
 @bp.route('/org/<int:org_id>/users/<int:user_id>/quota', methods=['POST'])

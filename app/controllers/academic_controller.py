@@ -1281,7 +1281,7 @@ def transform():
     data = request.get_json()
     oid = data.get('org_id')
     type = data.get('type')
-    config = OrgApiConfig.query.filter_by(org_id=oid,feature_type=type).first()
+    config = OrgConfig.query.filter_by(org_id=oid,feature_type=type).first()
     if not config:
         return jsonify({'error': '未找到API配置'})
     oorg = Org.query.get(oid)

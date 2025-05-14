@@ -109,7 +109,7 @@ def register():
             db.session.add(org_user)
             db.session.commit()
 
-            userrole = UserRole(ser_id=user.id,role_id=4)
+            userrole = UserRole(user_id=user.id,role_id=4)
             db.session.add(userrole)
             db.session.commit()
 
