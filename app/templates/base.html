@@ -139,6 +139,9 @@
             <li class="nav-item">
                 <a class="nav-link" href="{{ url_for('academic.all_config') }}">收费配置</a>
             </li>
+            <li class="nav-item">
+                <a class="nav-link" href="{{ url_for('academic.bank_api_config') }}">基础api配置</a>
+            </li>
             {% endif %}
             {% if current_user.is_convener %}
             <li class="nav-item">

@@ -25,6 +25,8 @@ from io import BytesIO
 import json
 import requests
 from app.models.all_config import AllConfig
+from app.models.bank_api_config import BankApiConfig
+import re
 
 logger = logging.getLogger(__name__)
 bp = Blueprint('academic', __name__)
@@ -1423,3 +1425,278 @@ def update_all_config():
         db.session.rollback()
         logger.error(f"更新基础收费设置失败: {str(e)}")
         return jsonify({'success': False, 'message': f'更新失败：{str(e)}'})
+
+@bp.route('/bank_api_config')
+@login_required
+def bank_api_config():
+    """显示银行接口配置页面"""
+    if not current_user.is_e_admin:
+        flash('您没有权限访问此页面', 'error')
+        return redirect(url_for('main.index'))
+    
+    try:
+        # 获取认证接口配置
+        auth_config = BankApiConfig.query.filter_by(feature_type=1).first()
+        if not auth_config:
+            auth_config = BankApiConfig(
+                feature_type=1,
+                api_url='http://172.16.160.88:8001',
+                api_path='/hw/bank/authenticate',
+                method='POST',
+                input_schema=json.dumps({
+                    "bank": "string",
+                    "account_name": "string",
+                    "account_number": "string",
+                    "password": "string"
+                }),
+                output_schema=json.dumps({"status": "success"})
+            )
+            db.session.add(auth_config)
+            db.session.commit()
+        
+        # 获取转账接口配置
+        transfer_config = BankApiConfig.query.filter_by(feature_type=2).first()
+        if not transfer_config:
+            transfer_config = BankApiConfig(
+                feature_type=2,
+                api_url='http://172.16.160.88:8001',
+                api_path='/hw/bank/transfer',
+                method='POST',
+                input_schema=json.dumps({
+                    "from_bank": "string",
+                    "from_name": "string",
+                    "from_account": "string",
+                    "password": "string",
+                    "to_bank": "string",
+                    "to_name": "string",
+                    "to_account": "string",
+                    "amount": "int"
+                }),
+                output_schema=json.dumps({"status": "success"})
+            )
+            db.session.add(transfer_config)
+            db.session.commit()
+        
+        return render_template('academic/bank_api_config.html', 
+                             auth_config=auth_config,
+                             transfer_config=transfer_config)
+        
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"获取银行接口配置失败: {str(e)}")
+        flash('获取配置失败，请重试', 'error')
+        return redirect(url_for('main.index'))
+
+@bp.route('/bank_api_config/update', methods=['POST'])
+@login_required
+def update_bank_api_config():
+    """更新银行接口配置"""
+    if not current_user.is_e_admin:
+        return jsonify({'success': False, 'message': '您没有权限执行此操作'})
+    
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({'success': False, 'message': '无效的请求数据'})
+        
+        feature_type = int(data.get('featureType'))
+        if feature_type not in [1, 2]:
+            return jsonify({'success': False, 'message': '无效的接口类型'})
+        
+        # 获取或创建配置
+        config = BankApiConfig.query.filter_by(feature_type=feature_type).first()
+        if not config:
+            config = BankApiConfig(feature_type=feature_type)
+            db.session.add(config)
+        
+        # 更新配置
+        config.api_url = data.get('apiUrl')
+        config.api_path = data.get('apiPath')
+        config.method = data.get('method')
+        config.input_schema = data.get('inputSchema')
+        config.output_schema = data.get('outputSchema')
+        
+        db.session.commit()
+        
+        # 记录日志
+        log_action(current_user.id, f'更新银行接口配置: type={feature_type}')
+        
+        return jsonify({'success': True, 'message': '配置更新成功'})
+        
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"更新银行接口配置失败: {str(e)}")
+        return jsonify({'success': False, 'message': f'更新失败：{str(e)}'})
+
+@bp.route('/bank_api_config/import', methods=['POST'])
+@login_required
+def import_bank_api_config():
+    """从txt文件导入银行接口配置"""
+    if not current_user.is_e_admin:
+        return jsonify({'success': False, 'message': '您没有权限执行此操作'})
+    
+    if 'configFile' not in request.files:
+        return jsonify({'success': False, 'message': '未上传文件'})
+    
+    file = request.files['configFile']
+    if not file or file.filename == '':
+        return jsonify({'success': False, 'message': '未选择文件'})
+    
+    if not file.filename.endswith('.txt'):
+        return jsonify({'success': False, 'message': '请上传txt文件'})
+    
+    try:
+        # 读取文件内容
+        content = file.read().decode('utf-8')
+        logger.info(f"读取文件内容成功，长度: {len(content)}")
+        
+        # 解析基础URL
+        url_match = re.search(r'url:\s*(.+?)(?:\n|$)', content)
+        if not url_match:
+            logger.error("未找到基础URL")
+            return jsonify({'success': False, 'message': '未找到基础URL'})
+        base_url = url_match.group(1).strip()
+        logger.info(f"解析到基础URL: {base_url}")
+        
+        # 解析接口配置
+        interfaces = []
+        current_interface = None
+        current_section = None
+        json_buffer = []
+        
+        def fix_json_format(json_str):
+            """修复JSON格式"""
+            # 处理多个JSON对象用/连接的情况
+            if '/' in json_str:
+                parts = json_str.split('/')
+                # 使用第一个JSON对象
+                json_str = parts[0].strip()
+            
+            # 修复缺少逗号的问题
+            json_str = re.sub(r'}\s*{', '},{', json_str)
+            
+            # 修复缺少逗号的问题（在属性之间）
+            json_str = re.sub(r'"\s*"', '","', json_str)
+            
+            # 修复类型值
+            json_str = re.sub(r':\s*int\b', ': "integer"', json_str)
+            json_str = re.sub(r':\s*string\b', ': "string"', json_str)
+            json_str = re.sub(r':\s*float\b', ': "number"', json_str)
+            json_str = re.sub(r':\s*bool\b', ': "boolean"', json_str)
+            
+            # 确保JSON字符串以}结尾
+            if not json_str.strip().endswith('}'):
+                json_str = json_str.strip() + '}'
+            
+            return json_str
+        
+        def process_json_section():
+            """处理当前JSON部分"""
+            if current_interface and current_section in ['input', 'output']:
+                try:
+                    json_str = ''.join(json_buffer)
+                    json_str = fix_json_format(json_str)
+                    current_interface[current_section] = json_str
+                    json.loads(current_interface[current_section])  # 验证JSON格式
+                    if current_section == 'output':
+                        interfaces.append(current_interface)
+                    return True
+                except json.JSONDecodeError as e:
+                    logger.error(f"JSON解析错误: {str(e)}")
+                    return False
+            return True
+        
+        for line in content.split('\n'):
+            line = line.strip()
+            if not line:
+                continue
+            
+            logger.debug(f"处理行: {line}")
+            
+            if line.startswith('Interface'):
+                # 处理之前的接口配置
+                if not process_json_section():
+                    return jsonify({'success': False, 'message': f'{current_section}参数JSON格式错误'})
+                
+                # 开始新的接口配置
+                interface_num = int(line.split()[1].rstrip(':'))
+                current_interface = {'type': interface_num}
+                current_section = None
+                json_buffer = []
+                logger.info(f"开始解析接口 {interface_num}")
+                
+            elif current_interface is not None:
+                if line.startswith('method:'):
+                    current_interface['method'] = line.split(':', 1)[1].strip()
+                    current_section = 'method'
+                elif line.startswith('path:'):
+                    current_interface['path'] = line.split(':', 1)[1].strip()
+                    current_section = 'path'
+                elif line.startswith('input:'):
+                    # 处理之前的section
+                    if not process_json_section():
+                        return jsonify({'success': False, 'message': f'{current_section}参数JSON格式错误'})
+                    current_section = 'input'
+                    json_buffer = [line.split(':', 1)[1].strip()]
+                elif line.startswith('output:'):
+                    # 处理之前的section
+                    if not process_json_section():
+                        return jsonify({'success': False, 'message': f'{current_section}参数JSON格式错误'})
+                    current_section = 'output'
+                    json_buffer = [line.split(':', 1)[1].strip()]
+                elif current_section in ['input', 'output']:
+                    json_buffer.append(line)
+        
+        # 处理最后一个接口
+        if not process_json_section():
+            return jsonify({'success': False, 'message': f'{current_section}参数JSON格式错误'})
+        
+        if not interfaces:
+            logger.error("未找到有效的接口配置")
+            return jsonify({'success': False, 'message': '未找到有效的接口配置'})
+        
+        logger.info(f"解析到 {len(interfaces)} 个接口配置")
+        logger.info(f"接口配置: {interfaces}")
+        
+        # 更新数据库
+        for interface in interfaces:
+            try:
+                # 验证JSON格式
+                input_json = json.loads(interface['input'])
+                output_json = json.loads(interface['output'])
+                
+                config = BankApiConfig.query.filter_by(feature_type=interface['type']).first()
+                if not config:
+                    config = BankApiConfig(feature_type=interface['type'])
+                    db.session.add(config)
+                
+                config.api_url = base_url
+                config.api_path = interface['path']
+                config.method = interface['method']
+                config.input_schema = json.dumps(input_json, ensure_ascii=False)
+                config.output_schema = json.dumps(output_json, ensure_ascii=False)
+                
+                logger.info(f"更新接口 {interface['type']} 配置成功")
+                
+            except json.JSONDecodeError as e:
+                logger.error(f"JSON解析错误: {str(e)}")
+                return jsonify({'success': False, 'message': f'接口 {interface["type"]} 的JSON格式错误: {str(e)}'})
+            except Exception as e:
+                logger.error(f"更新接口 {interface['type']} 配置失败: {str(e)}")
+                return jsonify({'success': False, 'message': f'更新接口 {interface["type"]} 配置失败: {str(e)}'})
+        
+        db.session.commit()
+        logger.info("所有配置更新成功")
+        
+        # 记录日志
+        log_action(current_user.id, '导入银行接口配置')
+        
+        return jsonify({'success': True, 'message': '配置导入成功'})
+        
+    except UnicodeDecodeError:
+        logger.error("文件编码错误")
+        return jsonify({'success': False, 'message': '文件编码错误，请使用UTF-8编码'})
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"导入银行接口配置失败: {str(e)}")
+        return jsonify({'success': False, 'message': f'导入失败：{str(e)}'})

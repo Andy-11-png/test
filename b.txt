@@ -1,0 +1,27 @@
+url: http://172.16.160.88:8001
+Interface 1:
+method:POST
+path:/hw/bank/authenticate
+input: {
+"bank": "string",
+"account_name": "string",
+"account_number": "string",
+"password": "string",
+"password1": "1111string"
+}
+output: {"status":"success"}/{"status":"fail"}
+
+Interface 2:
+method:POST
+path:/hw/bank/transfer
+input: {
+"from_bank": "string",
+"from_name": "string",
+"from_account": "string",
+"password": "string",
+"to_bank": "string",
+"to_name": "string",
+"to_account": "string",
+"amount": int
+}
+output: {"status":"success"}/{"status":"fail","reason":""}

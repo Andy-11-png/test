@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">银行接口配置</h5>
+                </div>
+                <div class="card-body">
+                    <!-- 导入配置表单 -->
+                    <form id="importForm" class="mb-4">
+                        <div class="mb-3">
+                            <label class="form-label">导入配置文件</label>
+                            <input type="file" class="form-control" id="configFile" name="configFile" accept=".txt" required>
+                            <div class="form-text">请上传包含接口配置的txt文件</div>
+                        </div>
+                        <button type="submit" class="btn btn-primary">导入配置</button>
+                    </form>
+
+                    <hr>
+
+                    <!-- 显示当前配置 -->
+                    <h6 class="mb-3">当前配置</h6>
+                    {% if auth_config %}
+                    <div class="card mb-3">
+                        <div class="card-header">
+                            <h6 class="mb-0">认证接口配置</h6>
+                        </div>
+                        <div class="card-body">
+                            <p><strong>基础URL:</strong> {{ auth_config.api_url }}</p>
+                            <p><strong>接口路径:</strong> {{ auth_config.api_path }}</p>
+                            <p><strong>请求方法:</strong> {{ auth_config.method }}</p>
+                            <p><strong>输入参数:</strong></p>
+                            <pre class="bg-light p-2">{{ auth_config.input_schema }}</pre>
+                            <p><strong>输出参数:</strong></p>
+                            <pre class="bg-light p-2">{{ auth_config.output_schema }}</pre>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    {% if transfer_config %}
+                    <div class="card">
+                        <div class="card-header">
+                            <h6 class="mb-0">转账接口配置</h6>
+                        </div>
+                        <div class="card-body">
+                            <p><strong>基础URL:</strong> {{ transfer_config.api_url }}</p>
+                            <p><strong>接口路径:</strong> {{ transfer_config.api_path }}</p>
+                            <p><strong>请求方法:</strong> {{ transfer_config.method }}</p>
+                            <p><strong>输入参数:</strong></p>
+                            <pre class="bg-light p-2">{{ transfer_config.input_schema }}</pre>
+                            <p><strong>输出参数:</strong></p>
+                            <pre class="bg-light p-2">{{ transfer_config.output_schema }}</pre>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.getElementById('importForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const fileInput = document.getElementById('configFile');
+    const file = fileInput.files[0];
+    
+    if (!file) {
+        alert('请选择文件');
+        return;
+    }
+    
+    const formData = new FormData();
+    formData.append('configFile', file);
+    
+    fetch('/academic/bank_api_config/import', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('配置导入成功');
+            location.reload();
+        } else {
+            alert('导入失败：' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('导入失败，请重试');
+    });
+});
+</script>
+{% endblock %} 
