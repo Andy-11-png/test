@@ -11,7 +11,7 @@ from app.models.question import Question
 from app.models.org_config import OrgConfig
 from app.models.org_api_config import OrgApiConfig
 from app.utils.api_utils import get_org_api_config, generate_form_from_schema, call_api
-from app.utils.bank_utils import trans_money
+from app.utils.bank_utils import trans_money, authenticate
 import logging
 import os
 import pandas as pd
@@ -1344,6 +1344,7 @@ def update_org_bank_info():
         # 记录日志
         log_action(current_user.id, '更新组织银行账户信息')
         
+        authenticate(org)
         return jsonify({'success': True, 'message': '银行账户信息更新成功'})
         
     except Exception as e:
