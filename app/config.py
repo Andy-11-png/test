@@ -1,6 +1,6 @@
 class Config:
     # 数据库配置
-    SQLALCHEMY_DATABASE_URI = 'mysql+pymysql://root:hxdL1FST@localhost:3306/stu'
+    SQLALCHEMY_DATABASE_URI = 'mysql+pymysql://root:jimbir8520@192.168.123.140:7002/stu'
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     
     # 安全配置

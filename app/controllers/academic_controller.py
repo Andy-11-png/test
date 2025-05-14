@@ -983,6 +983,28 @@ def batch_verify_students():
     if request.method == 'GET':
         return render_template('academic/batch_verify.html')
         
+    org_id = 0
+    org_id = request.args.get('org_id')
+    print(org_id)
+    if not (current_user.has_permission_level(3) or current_user.has_permission_level(2)):
+        flash('无权访问', 'error')
+        return redirect(url_for('main.index'))
+    
+    if not can_access_private_data(current_user.id):
+        flash('您没有权限访问学生信息', 'error')
+        return redirect(url_for('main.index'))
+    # 获取用户所在组织
+    org_user = OrgUser.query.filter_by(user_id=current_user.id).first()
+    if not org_user:
+        flash('您不属于任何组织', 'error')
+        return redirect(url_for('academic.students'))
+    
+    # 获取API配置
+    config = get_org_api_config(org_id, 0)  # 0 表示学生认证
+    if not config:
+        flash('未找到API配置', 'error')
+        return redirect(url_for('academic.students'))
+        
     if 'excel_file' not in request.files:
         return jsonify({'error': '未上传文件'}), 400
         
@@ -990,16 +1012,7 @@ def batch_verify_students():
     if not excel_file.filename.endswith(('.xlsx', '.xls')):
         return jsonify({'error': '请上传Excel文件(.xlsx或.xls)'}), 400
         
-    try:
-        # 检查用户是否属于组织
-        org_user = OrgUser.query.filter_by(user_id=current_user.id).first()
-        if not org_user:
-            return jsonify({'error': '您不属于任何组织'}), 400
-            
-        org = Org.query.get(org_user.org_id)
-        if not org:
-            return jsonify({'error': '组织不存在'}), 400
-            
+    try:            
         # 读取Excel文件
         df = pd.read_excel(excel_file)
         
@@ -1007,7 +1020,7 @@ def batch_verify_students():
         if len(df.columns) < 2:
             return jsonify({'error': 'Excel文件格式错误，需要至少两列：学生ID和学生姓名'}), 400
             
-        # 提取学生信息
+        # 提取学生信息并验证
         students = []
         for _, row in df.iterrows():
             student_id = str(row[0]).strip()
@@ -1024,9 +1037,76 @@ def batch_verify_students():
         if not students:
             return jsonify({'error': '未找到有效的学生信息'}), 400
             
-        return jsonify({'students': students})
+        # 检查组织余额
+        if org.balance < len(students):
+            return jsonify({'error': '组织余额不足'}), 400
+            
+        # 批量验证学生
+        results = []
+        success_count = 0
+        error_count = 0
+        
+        for student in students:
+            try:
+                # 准备请求数据
+                data = {
+                    'student_id': student['id'],
+                    'student_name': student['name']
+                }
+                
+                # 调用API
+                result = call_api(config, data)
+                
+                if 'error' not in result:
+                    # 创建订单记录
+                    order = UserOrder(
+                        user_id=current_user.id,
+                        order_id=0,
+                        order_type=0
+                    )
+                    db.session.add(order)
+                    success_count += 1
+                    results.append({
+                        'student_id': student['id'],
+                        'student_name': student['name'],
+                        'status': 'success',
+                        'message': '验证成功'
+                    })
+                else:
+                    error_count += 1
+                    results.append({
+                        'student_id': student['id'],
+                        'student_name': student['name'],
+                        'status': 'error',
+                        'message': result.get('error', '验证失败')
+                    })
+                    
+            except Exception as e:
+                error_count += 1
+                results.append({
+                    'student_id': student['id'],
+                    'student_name': student['name'],
+                    'status': 'error',
+                    'message': str(e)
+                })
+        
+        # 提交所有成功的订单
+        db.session.commit()
+        
+        # 记录日志
+        log_action(current_user.id, f'批量学生认证完成: 成功{success_count}条，失败{error_count}条')
+        
+        return jsonify({
+            'success': True,
+            'total': len(students),
+            'success_count': success_count,
+            'error_count': error_count,
+            'results': results
+        })
         
     except Exception as e:
+        db.session.rollback()
+        logger.error(f"批量学生认证失败: {str(e)}")
         return jsonify({'error': f'处理Excel文件时出错：{str(e)}'}), 400
 
 @bp.route('/org_api_config')
