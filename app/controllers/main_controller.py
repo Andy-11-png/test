@@ -109,6 +109,10 @@ def register():
             db.session.add(org_user)
             db.session.commit()
 
+            userrole = UserRole(ser_id=user.id,role_id=4)
+            db.session.add(userrole)
+            db.session.commit()
+
             eusers = UserRole.query.filter_by(role_id=2 or 3).all()
             euserIds = [euser.user_id for euser in eusers]
             eus=User.query.filter(User.id.in_(euserIds)).all()
