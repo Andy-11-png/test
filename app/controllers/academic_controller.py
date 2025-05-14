@@ -984,8 +984,9 @@ def batch_verify_students():
         return render_template('academic/batch_verify.html')
         
     org_id = 0
-    org_id = request.args.get('org_id')
-    print(org_id)
+    org_id = request.form.get('org_id')
+    logger.info(f"开始批量验证学生，组织ID: {org_id}")
+    
     if not (current_user.has_permission_level(3) or current_user.has_permission_level(2)):
         flash('无权访问', 'error')
         return redirect(url_for('main.index'))
@@ -993,6 +994,7 @@ def batch_verify_students():
     if not can_access_private_data(current_user.id):
         flash('您没有权限访问学生信息', 'error')
         return redirect(url_for('main.index'))
+        
     # 获取用户所在组织
     org_user = OrgUser.query.filter_by(user_id=current_user.id).first()
     if not org_user:
@@ -1004,6 +1006,8 @@ def batch_verify_students():
     if not config:
         flash('未找到API配置', 'error')
         return redirect(url_for('academic.students'))
+    
+    logger.info(f"API配置: URL={config.api_url}, Path={config.api_path}, Method={config.method}")
         
     if 'excel_file' not in request.files:
         return jsonify({'error': '未上传文件'}), 400
@@ -1015,6 +1019,7 @@ def batch_verify_students():
     try:            
         # 读取Excel文件
         df = pd.read_excel(excel_file)
+        logger.info(f"成功读取Excel文件，共{len(df)}行")
         
         # 验证数据格式
         if len(df.columns) < 2:
@@ -1037,7 +1042,13 @@ def batch_verify_students():
         if not students:
             return jsonify({'error': '未找到有效的学生信息'}), 400
             
+        logger.info(f"从Excel中提取到{len(students)}个有效学生信息")
+            
         # 检查组织余额
+        org = Org.query.get(org_user.org_id)
+        if not org:
+            return jsonify({'error': '组织不存在'}), 400
+            
         if org.balance < len(students):
             return jsonify({'error': '组织余额不足'}), 400
             
@@ -1045,6 +1056,10 @@ def batch_verify_students():
         results = []
         success_count = 0
         error_count = 0
+        
+        # 构建API URL
+        url = f"{config.api_url.rstrip('/')}/{config.api_path.lstrip('/')}"
+        logger.info(f"API完整URL: {url}")
         
         for student in students:
             try:
@@ -1054,32 +1069,70 @@ def batch_verify_students():
                     'student_name': student['name']
                 }
                 
-                # 调用API
-                result = call_api(config, data)
+                logger.info(f"发送请求到API: {url}")
+                logger.info(f"请求数据: {json.dumps(data, ensure_ascii=False)}")
                 
-                if 'error' not in result:
-                    # 创建订单记录
-                    order = UserOrder(
-                        user_id=current_user.id,
-                        order_id=0,
-                        order_type=0
-                    )
-                    db.session.add(order)
-                    success_count += 1
-                    results.append({
-                        'student_id': student['id'],
-                        'student_name': student['name'],
-                        'status': 'success',
-                        'message': '验证成功'
-                    })
+                # 调用API
+                response = requests.post(
+                    url,
+                    json=data,
+                    headers={
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    timeout=10
+                )
+                
+                logger.info(f"API响应状态码: {response.status_code}")
+                logger.info(f"API响应内容: {response.text[:200]}...")  # 只记录前200个字符
+                
+                # 检查响应状态码
+                if response.status_code == 200:
+                    try:
+                        result = response.json()
+                        if result.get('status') == 'success':
+                            # 创建订单记录
+                            order = UserOrder(
+                                user_id=current_user.id,
+                                order_id=0,
+                                order_type=0
+                            )
+                            db.session.add(order)
+                            success_count += 1
+                            results.append({
+                                'student_id': student['id'],
+                                'student_name': student['name'],
+                                'status': 'success',
+                                'message': '验证成功'
+                            })
+                            logger.info(f"学生 {student['id']} 验证成功")
+                        else:
+                            error_count += 1
+                            results.append({
+                                'student_id': student['id'],
+                                'student_name': student['name'],
+                                'status': 'error',
+                                'message': result.get('error', '验证失败')
+                            })
+                            logger.error(f"学生 {student['id']} 验证失败: {result.get('error', '验证失败')}")
+                    except json.JSONDecodeError as e:
+                        error_count += 1
+                        results.append({
+                            'student_id': student['id'],
+                            'student_name': student['name'],
+                            'status': 'error',
+                            'message': f'API返回格式错误: {str(e)}'
+                        })
+                        logger.error(f"学生 {student['id']} API返回格式错误: {str(e)}")
                 else:
                     error_count += 1
                     results.append({
                         'student_id': student['id'],
                         'student_name': student['name'],
                         'status': 'error',
-                        'message': result.get('error', '验证失败')
+                        'message': f'API请求失败: {response.status_code}'
                     })
+                    logger.error(f"学生 {student['id']} API请求失败: {response.status_code}")
                     
             except Exception as e:
                 error_count += 1
@@ -1089,6 +1142,7 @@ def batch_verify_students():
                     'status': 'error',
                     'message': str(e)
                 })
+                logger.error(f"学生 {student['id']} 处理出错: {str(e)}")
         
         # 提交所有成功的订单
         db.session.commit()
