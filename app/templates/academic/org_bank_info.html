@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+
+{% block title %}组织银行账户信息{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="mb-0">组织银行账户信息</h4>
+                </div>
+                <div class="card-body">
+                    <form id="bankInfoForm">
+                        <div class="mb-3">
+                            <label for="bankName" class="form-label">银行名称</label>
+                            <input type="text" class="form-control" id="bankName" name="bank_name" value="{{ org.bank_name }}" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="bankAccount" class="form-label">银行账号</label>
+                            <input type="text" class="form-control" id="bankAccount" name="bank_account" value="{{ org.bank_account }}" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="bankPassword" class="form-label">银行密码</label>
+                            <input type="password" class="form-control" id="bankPassword" name="bank_password" value="{{ org.bank_password }}" required>
+                        </div>
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary">保存修改</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+document.getElementById('bankInfoForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const formData = {
+        bank_name: document.getElementById('bankName').value,
+        bank_account: document.getElementById('bankAccount').value,
+        bank_password: document.getElementById('bankPassword').value
+    };
+    
+    fetch('{{ url_for("academic.update_org_bank_info") }}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('银行账户信息更新成功');
+        } else {
+            alert('更新失败：' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('更新失败，请重试');
+    });
+});
+</script>
+{% endblock %} 

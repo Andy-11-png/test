@@ -10,6 +10,7 @@ from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill, Alignment
 from io import BytesIO
 from app.utils.bank_utils import trans_money
+from app.utils.email_utils import send_email
 # 配置日志
 logger = logging.getLogger(__name__)
 
@@ -70,6 +71,10 @@ def approve_user(user_id):
                     user_id=current_user.id
                 )
                 db.session.add(log)
+                send_email(user.email, '审批通知', '您的申请已通过教务管理员审批，等待人事管理员审批')
+                eusers = UserRole.query.filter_by(value='he-admin').all()   
+                for euser in eusers:
+                    send_email(euser.email, '审批通知', '有新的申请等待审核')
                 flash('审批通过，等待人事管理员审批', 'success')
             else:
                 flash('该用户已被审批过', 'warning')
@@ -85,6 +90,7 @@ def approve_user(user_id):
                 )
                 db.session.add(log)
                 flash('审批通过，用户已激活', 'success')
+                send_email(user.email, '审批通知', '您的申请已通过人事管理员审批，用户已激活')
             elif user.status == '0':
                 flash('请等待教务管理员审批', 'warning')
             else:

@@ -78,3 +78,48 @@ def verify_email_code(email, code):
     
     verify.mark_as_used()
     return True
+
+def send_email(to_email, subject, content, is_html=False):
+    """发送普通邮件
+    
+    Args:
+        to_email (str): 收件人邮箱
+        subject (str): 邮件主题
+        content (str): 邮件内容
+        is_html (bool): 内容是否为HTML格式，默认为False
+    
+    Returns:
+        bool: 发送是否成功
+    """
+    try:
+        # 创建邮件消息
+        msg = Message(
+            subject,
+            recipients=[to_email],
+            body=content if not is_html else None,
+            html=content if is_html else None
+        )
+        
+        # 添加重试机制
+        max_retries = 3
+        retry_delay = 2  # 秒
+        last_error = None
+        
+        for attempt in range(max_retries):
+            try:
+                mail.send(msg)
+                logging.info(f"成功发送邮件到 {to_email}")
+                return True
+            except Exception as e:
+                last_error = e
+                logging.warning(f"发送邮件尝试 {attempt+1}/{max_retries} 失败: {str(e)}")
+                if attempt < max_retries - 1:
+                    time.sleep(retry_delay)
+        
+        # 所有重试都失败
+        logging.error(f"发送邮件到 {to_email} 最终失败: {str(last_error)}")
+        return False
+        
+    except Exception as e:
+        logging.error(f"发送邮件失败: {str(e)}")
+        return False

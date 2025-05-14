@@ -959,97 +959,55 @@ def check_feature_enabled(feature_type):
 @bp.route('/students/batch_verify', methods=['GET', 'POST'])
 @login_required
 def batch_verify_students():
-    if request.method == 'POST':
-        if 'file' not in request.files:
-            flash('请选择文件', 'error')
-            return redirect(request.url)
+    """处理批量学生认证请求"""
+    if request.method == 'GET':
+        return render_template('academic/batch_verify.html')
         
-        file = request.files['file']
-        if file.filename == '':
-            flash('请选择文件', 'error')
-            return redirect(request.url)
+    if 'excel_file' not in request.files:
+        return jsonify({'error': '未上传文件'}), 400
         
-        if not allowed_file(file.filename):
-            flash('只允许上传Excel文件(.xlsx, .xls)', 'error')
-            return redirect(request.url)
+    excel_file = request.files['excel_file']
+    if not excel_file.filename.endswith(('.xlsx', '.xls')):
+        return jsonify({'error': '请上传Excel文件(.xlsx或.xls)'}), 400
         
-        try:
-            # 检查用户是否属于组织
-            org_user = OrgUser.query.filter_by(user_id=current_user.id).first()
-            if not org_user:
-                flash('您不属于任何组织', 'error')
-                return redirect(url_for('academic.students'))
+    try:
+        # 检查用户是否属于组织
+        org_user = OrgUser.query.filter_by(user_id=current_user.id).first()
+        if not org_user:
+            return jsonify({'error': '您不属于任何组织'}), 400
             
-            org = Org.query.get(org_user.org_id)
-            if not org:
-                flash('组织不存在', 'error')
-                return redirect(url_for('academic.students'))
+        org = Org.query.get(org_user.org_id)
+        if not org:
+            return jsonify({'error': '组织不存在'}), 400
             
-            
-            # 读取Excel文件
-            df = pd.read_excel(file)
-            
-            # 检查必要的列是否存在
-            required_columns = ['姓名', '学号']
-            if not all(col in df.columns for col in required_columns):
-                flash('Excel文件格式不正确，请确保包含：姓名、学号列', 'error')
-                return redirect(request.url)
-            
-            success_count = 0
-            error_count = 0
-            
-            for _, row in df.iterrows():
-                try:
-                    name = str(row['姓名']).strip()
-                    student_id = str(row['学号']).strip()
-                    
-                    if not name or not student_id:
-                        logger.warning(f"Missing required fields for student {name}")
-                        error_count += 1
-                        continue
-                    
-                    # 检查学生是否已存在
-                    student = Student.query.filter_by(name=name, student_id=student_id).first()
-                    if not student:
-                        logger.warning(f"Student not found: {name} ({student_id})")
-                        error_count += 1
-                        continue
-                    
-
-                    
-                    # 创建订单记录
-                    order = UserOrder(
-                        user_id=current_user.id,
-                        org_id=org.id,
-                        amount=1,
-                        description=f"批量认证学生: {name} ({student_id})"
-                    )
-                    db.session.add(order)
-                    
-                    # 记录日志
-                    log = Log(
-                        log=f"用户 {current_user.name} 批量认证学生: {name} ({student_id})",
-                        user_id=current_user.id
-                    )
-                    db.session.add(log)
-                    
-                    success_count += 1
-                    
-                except Exception as e:
-                    logger.error(f"Error processing student {name}: {str(e)}")
-                    error_count += 1
-            
-            db.session.commit()
-            flash(f'批量认证完成：成功 {success_count} 条，失败 {error_count} 条', 'success' if success_count > 0 else 'warning')
-            
-        except Exception as e:
-            db.session.rollback()
-            logger.error(f"Error importing students: {str(e)}")
-            flash(f'导入失败：{str(e)}', 'error')
+        # 读取Excel文件
+        df = pd.read_excel(excel_file)
         
-        return redirect(url_for('academic.students'))
-    
-    return render_template('academic/batch_verify.html')
+        # 验证数据格式
+        if len(df.columns) < 2:
+            return jsonify({'error': 'Excel文件格式错误，需要至少两列：学生ID和学生姓名'}), 400
+            
+        # 提取学生信息
+        students = []
+        for _, row in df.iterrows():
+            student_id = str(row[0]).strip()
+            student_name = str(row[1]).strip()
+            
+            if not student_id or not student_name:
+                continue
+                
+            students.append({
+                'id': student_id,
+                'name': student_name
+            })
+            
+        if not students:
+            return jsonify({'error': '未找到有效的学生信息'}), 400
+            
+        return jsonify({'students': students})
+        
+    except Exception as e:
+        return jsonify({'error': f'处理Excel文件时出错：{str(e)}'}), 400
 
 @bp.route('/org_api_config')
 @login_required
@@ -1315,3 +1273,62 @@ def transform():
     if oid != org_user.org_id:
         trans_money(org, oorg, config.service_price)
     return jsonify({'success': True})
+
+@bp.route('/org/bank_info')
+@login_required
+def org_bank_info():
+    """显示组织银行账户信息页面"""
+    if not current_user.is_convener:
+        flash('您没有权限访问此页面', 'error')
+        return redirect(url_for('main.index'))
+    
+    # 获取用户所在组织
+    org_user = OrgUser.query.filter_by(user_id=current_user.id).first()
+    if not org_user:
+        flash('您不属于任何组织', 'error')
+        return redirect(url_for('main.index'))
+    
+    org = Org.query.get(org_user.org_id)
+    if not org:
+        flash('组织不存在', 'error')
+        return redirect(url_for('main.index'))
+    
+    return render_template('academic/org_bank_info.html', org=org)
+
+@bp.route('/org/bank_info/update', methods=['POST'])
+@login_required
+def update_org_bank_info():
+    """更新组织银行账户信息"""
+    if not current_user.is_convener:
+        return jsonify({'success': False, 'message': '您没有权限执行此操作'})
+    
+    # 获取用户所在组织
+    org_user = OrgUser.query.filter_by(user_id=current_user.id).first()
+    if not org_user:
+        return jsonify({'success': False, 'message': '您不属于任何组织'})
+    
+    org = Org.query.get(org_user.org_id)
+    if not org:
+        return jsonify({'success': False, 'message': '组织不存在'})
+    
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({'success': False, 'message': '无效的请求数据'})
+        
+        # 更新银行账户信息
+        org.bank_name = data.get('bank_name')
+        org.bank_account = data.get('bank_account')
+        org.bank_password = data.get('bank_password')
+        
+        db.session.commit()
+        
+        # 记录日志
+        log_action(current_user.id, '更新组织银行账户信息')
+        
+        return jsonify({'success': True, 'message': '银行账户信息更新成功'})
+        
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"更新组织银行账户信息失败: {str(e)}")
+        return jsonify({'success': False, 'message': f'更新失败：{str(e)}'})

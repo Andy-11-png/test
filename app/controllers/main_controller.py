@@ -15,7 +15,7 @@ from app.utils.pdf_utils import extract_bank_info_from_pdf
 from app.models.org import Org
 from app.models.org_config import OrgConfig
 from app.utils.bank_utils import authenticate
-
+from app.utils.email_utils import send_email 
 # 配置日志
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
@@ -108,7 +108,11 @@ def register():
             org_user = OrgUser(org_id=org.id, user_id=user.id)
             db.session.add(org_user)
             db.session.commit()
-            
+
+            eusers = UserRole.query.filter_by(value='he-admin'or 'e-admin').all()   
+            for euser in eusers:
+                send_email(euser.email, '审批通知', '有新的申请等待审核')
+            send_email(user.email, '注册成功', '等待审核')
             # 登录用户
             flash('注册成功！', 'success')
             
