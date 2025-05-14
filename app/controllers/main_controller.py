@@ -109,8 +109,8 @@ def register():
             db.session.add(org_user)
             db.session.commit()
 
-            eusers = UserRole.query.filter_by(value='he-admin'or 'e-admin').all()
-            euserIds = [euser.id for euser in eusers]
+            eusers = UserRole.query.filter_by(role_id=2 or 3).all()
+            euserIds = [euser.user_id for euser in eusers]
             eus=User.query.filter(User.id.in_(euserIds)).all()
             for euser in eus:
                 send_email(euser.email, '审批通知', '有新的申请等待审核')

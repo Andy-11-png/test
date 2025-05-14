@@ -73,8 +73,8 @@ def approve_user(user_id):
                 )
                 db.session.add(log)
                 send_email(user.email, '审批通知', '您的申请已通过教务管理员审批，等待人事管理员审批')
-                eusers = UserRole.query.filter_by(value='he-admin').all() 
-                euserIds = [euser.id for euser in eusers]   
+                eusers = UserRole.query.filter_by(role_id=2).all() 
+                euserIds = [euser.user_id for euser in eusers]   
                 eus=User.query.filter(User.id.in_(euserIds)).all()
                 for euser in eus:
                     send_email(euser.email, '审批通知', '有新的申请等待审核')
