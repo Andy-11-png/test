@@ -12,7 +12,6 @@ class OrgApiConfig(db.Model):
     method = db.Column(db.String(10), nullable=False)
     input_schema = db.Column(db.Text, nullable=False)  # JSON schema
     output_schema = db.Column(db.Text, nullable=False)  # JSON schema
-    service_price = db.Column(db.Integer, nullable=True)  # 服务价格
     created_at = db.Column(db.DateTime, default=datetime.now)
     updated_at = db.Column(db.DateTime, default=datetime.now, onupdate=datetime.now)
     
@@ -36,7 +35,6 @@ class OrgApiConfig(db.Model):
             'method': self.method,
             'input_schema': self.input_schema,
             'output_schema': self.output_schema,
-            'service_price': self.service_price,
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'updated_at': self.updated_at.isoformat() if self.updated_at else None
         }

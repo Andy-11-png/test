@@ -24,12 +24,22 @@
                                     {% if configs[0].is_enabled %}checked{% endif %}>
                                 <label class="form-check-label" for="papers">论文功能</label>
                             </div>
+                            <div class="mt-2">
+                                <label for="papers_price" class="form-label">服务价格</label>
+                                <input type="number" class="form-control" id="papers_price" name="papers_price" 
+                                    value="{{ configs[0].service_price or 0 }}" min="0">
+                            </div>
                         </div>
                         <div class="mb-3">
                             <div class="form-check form-switch">
                                 <input class="form-check-input" type="checkbox" id="courses" name="courses"
                                     {% if configs[1].is_enabled %}checked{% endif %}>
                                 <label class="form-check-label" for="courses">课程功能</label>
+                            </div>
+                            <div class="mt-2">
+                                <label for="courses_price" class="form-label">服务价格</label>
+                                <input type="number" class="form-control" id="courses_price" name="courses_price" 
+                                    value="{{ configs[1].service_price or 0 }}" min="0">
                             </div>
                         </div>
                         <div class="mb-3">
@@ -38,12 +48,22 @@
                                     {% if configs[2].is_enabled %}checked{% endif %}>
                                 <label class="form-check-label" for="verify">学生认证</label>
                             </div>
+                            <div class="mt-2">
+                                <label for="verify_price" class="form-label">服务价格</label>
+                                <input type="number" class="form-control" id="verify_price" name="verify_price" 
+                                    value="{{ configs[2].service_price or 0 }}" min="0">
+                            </div>
                         </div>
                         <div class="mb-3">
                             <div class="form-check form-switch">
                                 <input class="form-check-input" type="checkbox" id="search" name="search"
                                     {% if configs[3].is_enabled %}checked{% endif %}>
                                 <label class="form-check-label" for="search">学生搜索</label>
+                            </div>
+                            <div class="mt-2">
+                                <label for="search_price" class="form-label">服务价格</label>
+                                <input type="number" class="form-control" id="search_price" name="search_price" 
+                                    value="{{ configs[3].service_price or 0 }}" min="0">
                             </div>
                         </div>
                         <div class="d-grid">

@@ -11,6 +11,7 @@ from openpyxl.styles import Font, PatternFill, Alignment
 from io import BytesIO
 from app.utils.bank_utils import trans_money
 from app.utils.email_utils import send_email
+from app.models.all_config import AllConfig
 # 配置日志
 logger = logging.getLogger(__name__)
 
@@ -391,7 +392,9 @@ def import_org_users(org_id):
         
         success_count = 0
         error_count = 0
-        
+        Allconfig = AllConfig.query.first()
+        totalMoney = Allconfig.all
+        privateMoney = Allconfig.private
         for _, row in df.iterrows():
             try:
                 email = str(row['邮箱']).strip()
@@ -457,14 +460,9 @@ def import_org_users(org_id):
                     user_role = UserRole(user_id=user.id, role_id=role.id)
                     db.session.add(user_role)
                 
-                success_count += 1
-                if active.lv == 1 and has_level1 == False:
-                    has_level1 = True
-                    money = 1000
-                elif active.lv == 2 and has_level1 == False:
-                    money+=1000
-                elif active.lv == 3 and has_level1 == False:
-                    money+=2000
+                if active.lv >=2 :
+                  totalMoney+=privateMoney
+               
             except Exception as e:
                 logger.error(f"Error processing user {email}: {str(e)}")
                 error_count += 1
@@ -477,7 +475,7 @@ def import_org_users(org_id):
         logger.error(f"Error importing users: {str(e)}")
         flash(f'导入失败：{str(e)}', 'error')
     oorg = Org.query.filter_by(id=0).first()
-    trans_money(org, oorg, money)
+    trans_money(org, oorg, totalMoney)
     return redirect(url_for('user.org_users', org_id=org_id))
 
 @bp.route('/org/<int:org_id>/users/<int:user_id>/quota', methods=['POST'])

@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+
+{% block title %}基础收费设置{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="mb-0">基础收费设置</h4>
+                </div>
+                <div class="card-body">
+                    {% with messages = get_flashed_messages(with_categories=true) %}
+                        {% if messages %}
+                            {% for category, message in messages %}
+                                <div class="alert alert-{{ category }}">{{ message }}</div>
+                            {% endfor %}
+                        {% endif %}
+                    {% endwith %}
+
+                    <form id="allConfigForm">
+                        <div class="mb-3">
+                            <label for="allPrice" class="form-label">所有用户基础收费</label>
+                            <div class="input-group">
+                                <input type="number" class="form-control" id="allPrice" name="all" 
+                                    value="{{ config.all }}" min="0" required>
+                                <span class="input-group-text">积分</span>
+                            </div>
+                            <div class="form-text">设置所有用户访问数据时的基础收费金额</div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="privatePrice" class="form-label">私有数据基础收费</label>
+                            <div class="input-group">
+                                <input type="number" class="form-control" id="privatePrice" name="private" 
+                                    value="{{ config.private }}" min="0" required>
+                                <span class="input-group-text">积分</span>
+                            </div>
+                            <div class="form-text">设置访问私有数据时的基础收费金额</div>
+                        </div>
+                        
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary">保存设置</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+document.getElementById('allConfigForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const formData = {
+        all: parseInt(document.getElementById('allPrice').value),
+        private: parseInt(document.getElementById('privatePrice').value)
+    };
+    
+    fetch('{{ url_for("academic.update_all_config") }}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('基础收费设置已更新');
+        } else {
+            alert('更新失败：' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('更新失败，请重试');
+    });
+});
+</script>
+{% endblock %} 

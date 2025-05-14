@@ -24,6 +24,7 @@ from functools import wraps
 from io import BytesIO
 import json
 import requests
+from app.models.all_config import AllConfig
 
 logger = logging.getLogger(__name__)
 bp = Blueprint('academic', __name__)
@@ -876,7 +877,7 @@ def student_detail(student_id):
 @bp.route('/org/config', methods=['GET', 'POST'])
 @login_required
 def org_config():
-    # 检查用户是否为convenerk
+    # 检查用户是否为convener
     if not current_user.is_convener:
         flash('您没有权限访问此页面', 'error')
         return redirect(url_for('main.index'))
@@ -900,7 +901,8 @@ def org_config():
                 config = OrgConfig(
                     org_id=org_user.org_id,
                     feature_type=feature_type,
-                    is_enabled=True
+                    is_enabled=True,
+                    service_price=0  # 设置默认服务价格
                 )
                 db.session.add(config)
                 db.session.commit()
@@ -912,14 +914,30 @@ def org_config():
     # 处理POST请求
     try:
         # 更新配置
-        for feature_type, feature_name in enumerate(['papers', 'courses', 'verify', 'search']):
+        feature_types = {
+            'papers': 0,
+            'courses': 1,
+            'verify': 2,
+            'search': 3
+        }
+        
+        for feature_name, feature_type in feature_types.items():
             config = OrgConfig.query.filter_by(
                 org_id=org_user.org_id,
                 feature_type=feature_type
             ).first()
             
             if config:
+                # 更新启用状态
                 config.is_enabled = request.form.get(feature_name) == 'on'
+                
+                # 更新服务价格
+                price = request.form.get(f'{feature_name}_price')
+                if price is not None:
+                    try:
+                        config.service_price = int(price)
+                    except ValueError:
+                        config.service_price = 0
         
         db.session.commit()
         flash('配置已保存', 'success')
@@ -1331,4 +1349,76 @@ def update_org_bank_info():
     except Exception as e:
         db.session.rollback()
         logger.error(f"更新组织银行账户信息失败: {str(e)}")
+        return jsonify({'success': False, 'message': f'更新失败：{str(e)}'})
+
+@bp.route('/all_config')
+@login_required
+def all_config():
+    """显示基础收费设置页面"""
+    if not current_user.is_e_admin:
+        flash('您没有权限访问此页面', 'error')
+        return redirect(url_for('main.index'))
+    
+    try:
+        # 获取或创建配置
+        config = AllConfig.query.first()
+        if not config:
+            # 如果没有配置，创建一个新的
+            config = AllConfig()
+            config.all = 0
+            config.private = 0
+            db.session.add(config)
+            db.session.commit()
+            # 重新查询以确保数据已保存
+            config = AllConfig.query.first()
+        
+        if not config:
+            raise Exception("无法创建或获取配置")
+            
+        return render_template('academic/all_config.html', config=config)
+        
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"获取基础收费设置失败: {str(e)}")
+        flash('获取设置失败，请重试', 'error')
+        return redirect(url_for('main.index'))
+
+@bp.route('/all_config/update', methods=['POST'])
+@login_required
+def update_all_config():
+    """更新基础收费设置"""
+    if not current_user.is_e_admin:
+        return jsonify({'success': False, 'message': '您没有权限执行此操作'})
+    
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({'success': False, 'message': '无效的请求数据'})
+        
+        # 获取或创建配置
+        config = AllConfig.query.first()
+        if not config:
+            config = AllConfig()
+            db.session.add(config)
+        
+        # 更新配置
+        try:
+            all_price = int(data.get('all', 0))
+            private_price = int(data.get('private', 0))
+        except ValueError:
+            return jsonify({'success': False, 'message': '价格必须是有效的数字'})
+        
+        config.all = all_price
+        config.private = private_price
+        
+        db.session.commit()
+        
+        # 记录日志
+        log_action(current_user.id, f'更新基础收费设置: all={all_price}, private={private_price}')
+        
+        return jsonify({'success': True, 'message': '基础收费设置已更新'})
+        
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"更新基础收费设置失败: {str(e)}")
         return jsonify({'success': False, 'message': f'更新失败：{str(e)}'})

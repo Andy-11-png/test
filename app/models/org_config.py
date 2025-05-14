@@ -7,6 +7,7 @@ class OrgConfig(db.Model):
     org_id = db.Column(db.Integer, db.ForeignKey('org.id'), nullable=False)
     feature_type = db.Column(db.Integer, nullable=False)  # 0: 论文, 1: 课程, 2: 学生认证, 3: 学生搜索
     is_enabled = db.Column(db.Boolean, default=True)
+    service_price = db.Column(db.Integer, nullable=True)  # 服务价格
     created_at = db.Column(db.DateTime, default=db.func.now())
     updated_at = db.Column(db.DateTime, default=db.func.now(), onupdate=db.func.now())
     

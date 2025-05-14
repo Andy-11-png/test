@@ -37,12 +37,6 @@
         </div>
         
         <div class="form-group">
-            <label for="service_price">服务价格</label>
-            <input type="number" class="form-control" id="service_price" name="service_price" min="0" step="1">
-            <small class="form-text text-muted">请输入服务价格（整数）</small>
-        </div>
-        
-        <div class="form-group">
             <label for="input_schema">输入Schema</label>
             <textarea class="form-control" id="input_schema" name="input_schema" rows="5" required></textarea>
         </div>
@@ -62,7 +56,6 @@
     const apiUrlInput = document.getElementById('api_url');
     const apiPathInput = document.getElementById('api_path');
     const methodSelect = document.getElementById('method');
-    const servicePriceInput = document.getElementById('service_price');
     const inputSchemaTextarea = document.getElementById('input_schema');
     const outputSchemaTextarea = document.getElementById('output_schema');
     
@@ -73,7 +66,6 @@
         apiUrlInput.value = '';
         apiPathInput.value = '';
         methodSelect.value = 'POST';
-        servicePriceInput.value = '';
         inputSchemaTextarea.value = '{}';
         outputSchemaTextarea.value = '{}';
     }
@@ -88,36 +80,17 @@
         }
     }
     
-    // 根据功能类型更新表单字段的显示状态
-    function updateFormFields(featureType) {
-        // 获取服务价格表单组元素
-        const servicePriceGroup = document.getElementById('service_price').closest('.form-group');
-        
-        // 当选择论文搜索(值为2)时隐藏服务价格
-        if (featureType === '2') {
-            servicePriceGroup.style.display = 'none';
-            // 隐藏时设置默认值为0
-            servicePriceInput.value = '0';
-        } else {
-            servicePriceGroup.style.display = 'block';
-        }
-    }
-    
     function loadConfig(featureType) {
         const config = configs[featureType];
         if (config) {
             apiUrlInput.value = config.api_url || '';
             apiPathInput.value = config.api_path || '';
             methodSelect.value = config.method || 'POST';
-            servicePriceInput.value = config.service_price || '';
             inputSchemaTextarea.value = formatJsonSchema(config.input_schema);
             outputSchemaTextarea.value = formatJsonSchema(config.output_schema);
         } else {
             clearForm();
         }
-        
-        // 调用新函数更新字段可见性
-        updateFormFields(featureType);
     }
     
     // 当选择功能类型时加载配置
