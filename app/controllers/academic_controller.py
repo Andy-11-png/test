@@ -1030,13 +1030,15 @@ def batch_verify_students():
         for _, row in df.iterrows():
             student_id = str(row[0]).strip()
             student_name = str(row[1]).strip()
+            photo_path = str(row[2]).strip() if len(row) > 2 else None
             
             if not student_id or not student_name:
                 continue
                 
             students.append({
                 'id': student_id,
-                'name': student_name
+                'name': student_name,
+                'photo_path': photo_path
             })
             
         if not students:
@@ -1065,75 +1067,51 @@ def batch_verify_students():
             try:
                 # 准备请求数据
                 data = {
-                    'id': student['id'],
-                    'name': student['name']
+                    'id': str(student['id']).strip(),
+                    'name': str(student['name']).strip()
                 }
+                
+                # 处理照片文件
+                files = {}
+                if student['photo_path'] and os.path.exists(student['photo_path']):
+                    files['photo'] = open(student['photo_path'], 'rb')
                 
                 logger.info(f"发送请求到API: {url}")
                 logger.info(f"请求数据: {json.dumps(data, ensure_ascii=False)}")
                 
                 # 调用API
-                response = requests.post(
-                    url,
-                    json=data,
-                    headers={
-                        'Content-Type': 'application/json',
-                        'Accept': 'application/json'
-                    },
-                    timeout=10
-                )
+                result = call_api(config, data, files)
                 
-                logger.info(f"API响应状态码: {response.status_code}")
-                logger.info(f"API响应内容: {response.text[:200]}...")  # 只记录前200个字符
+                # 关闭文件
+                if 'photo' in files:
+                    files['photo'].close()
                 
                 # 检查响应状态码
-                if response.status_code == 200:
-                    try:
-                        result = response.json()
-                        if result.get('status') == 'success':
-                            # 创建订单记录
-                            order = UserOrder(
-                                user_id=current_user.id,
-                                order_id=0,
-                                order_type=0
-                            )
-                            db.session.add(order)
-                            success_count += 1
-                            results.append({
-                                'student_id': student['id'],
-                                'student_name': student['name'],
-                                'status': 'success',
-                                'message': '验证成功'
-                            })
-                            logger.info(f"学生 {student['id']} 验证成功")
-                        else:
-                            error_count += 1
-                            results.append({
-                                'student_id': student['id'],
-                                'student_name': student['name'],
-                                'status': 'error',
-                                'message': result.get('error', '验证失败')
-                            })
-                            logger.error(f"学生 {student['id']} 验证失败: {result.get('error', '验证失败')}")
-                    except json.JSONDecodeError as e:
-                        error_count += 1
-                        results.append({
-                            'student_id': student['id'],
-                            'student_name': student['name'],
-                            'status': 'error',
-                            'message': f'API返回格式错误: {str(e)}'
-                        })
-                        logger.error(f"学生 {student['id']} API返回格式错误: {str(e)}")
+                if 'error' not in result:
+                    # 创建订单记录
+                    order = UserOrder(
+                        user_id=current_user.id,
+                        order_id=0,
+                        order_type=0
+                    )
+                    db.session.add(order)
+                    success_count += 1
+                    results.append({
+                        'student_id': student['id'],
+                        'student_name': student['name'],
+                        'status': 'success',
+                        'message': '验证成功'
+                    })
+                    logger.info(f"学生 {student['id']} 验证成功")
                 else:
                     error_count += 1
                     results.append({
                         'student_id': student['id'],
                         'student_name': student['name'],
                         'status': 'error',
-                        'message': f'API请求失败: {response.status_code}'
+                        'message': result.get('error', '验证失败')
                     })
-                    logger.error(f"学生 {student['id']} API请求失败: {response.status_code}")
-                    
+                    logger.error(f"学生 {student['id']} 验证失败: {result.get('error', '验证失败')}")
             except Exception as e:
                 error_count += 1
                 results.append({
