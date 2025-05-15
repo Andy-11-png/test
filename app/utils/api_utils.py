@@ -178,9 +178,9 @@ def call_api(config, data, files=None):
             # 尝试获取更详细的错误信息
             try:
                 error_detail = response.json()
-                return {'error': f'API调用失败: {response.status_code}', 'detail': error_detail}
+                return {'error': f'API调用失败1: {response.status_code}', 'detail': error_detail}
             except:
-                return {'error': f'API调用失败: {response.status_code}', 'detail': response.text}
+                return {'error': f'API调用失败2: {response.status_code}', 'detail': response.text}
             
     except Exception as e:
         print(f"API调用异常: {str(e)}")

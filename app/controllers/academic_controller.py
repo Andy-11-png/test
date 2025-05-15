@@ -298,9 +298,9 @@ def download_paper():
                 # 处理错误响应
                 try:
                     error_detail = response.json()
-                    return jsonify({'error': f'API调用失败: {response.status_code}', 'detail': error_detail})
+                    return jsonify({'error': f'API调用失败3: {response.status_code}', 'detail': error_detail})
                 except:
-                    return jsonify({'error': f'API调用失败: {response.status_code}', 'detail': response.text})
+                    return jsonify({'error': f'API调用失败4: {response.status_code}', 'detail': response.text})
                 
         finally:
             # 恢复原始设置
@@ -770,7 +770,10 @@ def verify_student_page():
             
             # 记录日志
             log_action(current_user.id, f'学生认证成功: {data}')
-        
+            if result.get('status') == 'y':
+               flash('学生认证为真', 'success')
+            else:
+                flash('学生认证为否', 'error')
         return jsonify(result)
         
     except Exception as e:
@@ -834,7 +837,7 @@ def search_students_page():
         
         print(f"Response status: {response.status_code}")
         print(f"Response content: {response.text}")
-        
+
         # 处理API响应
         if response.status_code == 200:
             # 如果API调用成功，扣除余额并创建订单
@@ -857,13 +860,18 @@ def search_students_page():
                 return jsonify(response.json())
             except:
                 return jsonify({'error': '无效的API响应格式'})
+        if response.status_code == 404:
+            flash('学生认证：未找到对应学生')
+            return jsonify({'msg':'未找到对应信息'})
         else:
             # 尝试获取错误详情
             try:
                 error_detail = response.json()
-                return jsonify({'error': f'API调用失败: {response.status_code}', 'detail': error_detail})
+                if response.status_code == 404 :
+                 return jsonify({'msg':'未找到对应信息'})
+                return jsonify({'error': f'API调用失败5: {response.status_code}', 'detail': error_detail})
             except:
-                return jsonify({'error': f'API调用失败: {response.status_code}', 'detail': response.text})
+                return jsonify({'error': f'API调用失败6: {response.status_code}', 'detail': response.text})
         
     except Exception as e:
         db.session.rollback()
