@@ -743,6 +743,7 @@ def verify_student_page():
             if not key.endswith('_base64'):  # 跳过base64字段
                 data[key] = request.form[key]
         
+        data.pop('org_id')
         # 处理文件上传
         for key in request.files:
             file = request.files[key]
@@ -770,10 +771,6 @@ def verify_student_page():
             
             # 记录日志
             log_action(current_user.id, f'学生认证成功: {data}')
-            if result.get('status') == 'y':
-               flash('学生认证为真', 'success')
-            else:
-                flash('学生认证为否', 'error')
         return jsonify(result)
         
     except Exception as e:
@@ -861,14 +858,13 @@ def search_students_page():
             except:
                 return jsonify({'error': '无效的API响应格式'})
         if response.status_code == 404:
-            flash('学生认证：未找到对应学生')
-            return jsonify({'msg':'未找到对应信息'})
+            return jsonify({'msg':'学生认证：未找到对应学生'})
         else:
             # 尝试获取错误详情
             try:
                 error_detail = response.json()
                 if response.status_code == 404 :
-                 return jsonify({'msg':'未找到对应信息'})
+                 return '学生认证：未找到对应学生'
                 return jsonify({'error': f'API调用失败5: {response.status_code}', 'detail': error_detail})
             except:
                 return jsonify({'error': f'API调用失败6: {response.status_code}', 'detail': response.text})
@@ -1093,9 +1089,8 @@ def batch_verify_students():
                 # 关闭文件
                 if 'photo' in files:
                     files['photo'].close()
-                
                 # 检查响应状态码
-                if 'error' not in result:
+                if 'error' not in result and result.get('status') == 'y' :
                     # 创建订单记录
                     order = UserOrder(
                         user_id=current_user.id,
@@ -1117,7 +1112,7 @@ def batch_verify_students():
                         'student_id': student['id'],
                         'student_name': student['name'],
                         'status': 'error',
-                        'message': result.get('error', '验证失败')
+                        'message': result.get('error', '未找到對應學生')
                     })
                     logger.error(f"学生 {student['id']} 验证失败: {result.get('error', '验证失败')}")
             except Exception as e:

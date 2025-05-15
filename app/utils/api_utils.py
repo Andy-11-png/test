@@ -100,10 +100,7 @@ def call_api(config, data, files=None):
             
             # 1. 学生认证功能 - multipart/form-data
             if 'student/authenticate' in api_path_lower or 'student/verify' in api_path_lower:
-                if request_files:
-                    response = requests.post(url, data=request_data, files=request_files)
-                else:
-                    response = requests.post(url, data=request_data)
+                response = requests.post(url, data=request_data)
             
             # 2. 学生搜索功能 - 标准JSON
             elif 'student/search' in api_path_lower or 'student/query' in api_path_lower:
@@ -174,6 +171,9 @@ def call_api(config, data, files=None):
                 return response.json()
             except ValueError:
                 return {'error': '无效的API响应格式'}
+        if response.status_code == 500:
+            print(f"Response Bod1111y: {response.text}")
+            return  {'status': 'n'}
         else:
             # 尝试获取更详细的错误信息
             try:

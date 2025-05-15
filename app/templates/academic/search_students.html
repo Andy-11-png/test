@@ -166,6 +166,12 @@ document.getElementById('confirmPayment').addEventListener('click', function() {
     })
     .then(data => {
         if (!data) return; // 如果转账失败,data会是undefined
+        if (data.msg){
+            data = data.msg
+            console.log(data)
+        }else{
+            data = JSON.stringify(data, null, 2)
+        }
         // 显示查询结果
         const resultDiv = document.createElement('div');
         resultDiv.className = 'mt-4';
@@ -173,7 +179,7 @@ document.getElementById('confirmPayment').addEventListener('click', function() {
             <h3>查询结果</h3>
             <div class="card">
                 <div class="card-body">
-                    <pre>${JSON.stringify(data, null, 2)}</pre>
+                    <pre>${data}</pre>
                 </div>
             </div>
         `;

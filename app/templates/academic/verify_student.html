@@ -344,6 +344,14 @@ document.addEventListener('DOMContentLoaded', function() {
         })
         .then(data => {
             if (!data) return; // 如果转账失败,data会是undefined
+            if(data.status == 'y'){
+                data = '认证成功'
+            }
+            else if(data.status == 'n'){
+                data = '未找到学生'
+            }else{
+                data = JSON.stringify(data, null, 2)
+            }
             // 显示认证结果
             const resultDiv = document.createElement('div');
             resultDiv.className = 'mt-4';
@@ -351,7 +359,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 <h3>认证结果</h3>
                 <div class="card">
                     <div class="card-body">
-                        <pre>${JSON.stringify(data, null, 2)}</pre>
+                        <pre>${data}</pre>
                     </div>
                 </div>
             `;
