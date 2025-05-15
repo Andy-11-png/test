@@ -23,7 +23,7 @@
             <h4>批量导入用户</h4>
         </div>
         <div class="card-body">
-            <form method="POST" action="{{ url_for('user.import_org_users', org_id=org.id) }}" enctype="multipart/form-data">
+            <form id="importForm" method="POST" action="{{ url_for('user.import_org_users', org_id=org.id) }}" enctype="multipart/form-data">
                 <div class="form-group">
                     <label for="excel_file">选择Excel文件</label>
                     <input type="file" class="form-control" id="excel_file" name="excel_file" accept=".xlsx,.xls" required>
@@ -109,6 +109,55 @@
         </div>
     </div>
 </div>
+
+<!-- 支付方式选择对话框 -->
+<div class="modal fade" id="paymentModal" tabindex="-1" aria-labelledby="paymentModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="paymentModalLabel">选择支付方式</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="form-check mb-2">
+                    <input class="form-check-input" type="radio" name="paymentMethod" id="transfer" value="transfer" checked>
+                    <label class="form-check-label" for="transfer">
+                        转账
+                    </label>
+                </div>
+                <div class="form-check mb-2">
+                    <input class="form-check-input" type="radio" name="paymentMethod" id="alipay" value="alipay" disabled>
+                    <label class="form-check-label text-muted" for="alipay">
+                        支付宝
+                    </label>
+                </div>
+                <div class="form-check mb-2">
+                    <input class="form-check-input" type="radio" name="paymentMethod" id="wechat" value="wechat" disabled>
+                    <label class="form-check-label text-muted" for="wechat">
+                        微信支付
+                    </label>
+                </div>
+                <div class="form-check mb-2">
+                    <input class="form-check-input" type="radio" name="paymentMethod" id="paypal" value="paypal" disabled>
+                    <label class="form-check-label text-muted" for="paypal">
+                        PayPal
+                    </label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="paymentMethod" id="bank" value="bank" disabled>
+                    <label class="form-check-label text-muted" for="bank">
+                        银行卡
+                    </label>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <button type="button" class="btn btn-primary" id="confirmPayment">确定</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <style>
     .container {
         max-width: 1200px;
@@ -187,4 +236,69 @@
         margin-bottom: 1rem;
     }
 </style> 
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const importForm = document.getElementById('importForm');
+    const paymentModal = new bootstrap.Modal(document.getElementById('paymentModal'));
+    
+    // 监听导入表单提交
+    importForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const fileInput = document.getElementById('excel_file');
+        if (!fileInput.files.length) {
+            alert('请选择Excel文件');
+            return;
+        }
+
+        // 显示支付方式选择对话框
+        paymentModal.show();
+    });
+
+    // 监听支付确认按钮
+    document.getElementById('confirmPayment').addEventListener('click', function() {
+        const paymentMethod = document.querySelector('input[name="paymentMethod"]:checked').value;
+        
+        if (paymentMethod !== 'transfer') {
+            alert('目前只支持转账支付方式');
+            return;
+        }
+
+        const searchData = {
+            'org_id': '{{ org.id }}',
+            'type': 0
+        };
+
+        // 发送转账请求
+        fetch('/academic/transform', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify(searchData)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                throw new Error(data.error + (data.detail ? '\n' + JSON.stringify(data.detail) : ''));
+            }
+
+            // 关闭支付方式选择对话框
+            paymentModal.hide();
+
+            // 转账成功后提交导入表单
+            importForm.submit();
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('操作失败：' + error.message);
+        });
+    });
+});
+</script>
 {% endblock %}
