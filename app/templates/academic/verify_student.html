@@ -256,13 +256,18 @@ document.addEventListener('DOMContentLoaded', function() {
         .then(response => response.json())
         .then(data => {
             // 显示转账结果
+            if(data.success){
+            data = '转账成功'
+            }else{
+            data = '转账失败'
+            }
             const resultDiv = document.createElement('div');
             resultDiv.className = 'mt-4';
             resultDiv.innerHTML = `
                 <h3>转账结果</h3>
                 <div class="card">
                     <div class="card-body">
-                        <pre>${JSON.stringify(data, null, 2)}</pre>
+                        <pre>${data}</pre>
                     </div>
                 </div>
             `;

@@ -132,13 +132,18 @@ document.getElementById('confirmPayment').addEventListener('click', function() {
     .then(response => response.json())
     .then(data => {
         // 显示转账结果
+        if(data.success){
+          data = '转账成功'
+        }else{
+            data = '转账失败'
+        }
         const resultDiv = document.createElement('div');
         resultDiv.className = 'mt-4';
         resultDiv.innerHTML = `
             <h3>转账结果</h3>
             <div class="card">
                 <div class="card-body">
-                    <pre>${JSON.stringify(data, null, 2)}</pre>
+                    <pre>${data}</pre>
                 </div>
             </div>
         `;
@@ -171,6 +176,7 @@ document.getElementById('confirmPayment').addEventListener('click', function() {
             console.log(data)
         }else{
             data = JSON.stringify(data, null, 2)
+            data = '入学年份：'+data.enroll_year+'，GPA：'+data.gpa+'，毕业年份：'+data.graduation_year+'，姓名：'+data.name
         }
         // 显示查询结果
         const resultDiv = document.createElement('div');
