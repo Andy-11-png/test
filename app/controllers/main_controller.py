@@ -347,7 +347,19 @@ def admin_template():
 @login_required
 def org_list():
     """显示所有组织列表"""
-    orgs = Org.query.filter(Org.id != 0).all()
+    # 获取搜索参数
+    search = request.args.get('search', '').strip()
+    
+    # 构建查询
+    query = Org.query.filter(Org.id != 0)
+    
+    # 如果有搜索关键词，添加搜索条件
+    if search:
+        query = query.filter(Org.name.ilike(f'%{search}%'))
+    
+    # 执行查询
+    orgs = query.all()
+    
     return render_template('org_list.html', orgs=orgs)
 
 @bp.route('/orgs/<int:org_id>/services')
