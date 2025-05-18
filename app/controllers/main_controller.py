@@ -252,10 +252,14 @@ def admin():
                     if not user_role:
                         user_role = UserRole(user_id=user.id, role_id=role.id)
                         db.session.add(user_role)
+                        db.session.flush()
                         success_count += 1
                     else:
                         logger.info(f"User {email} already has role {role_value}")
-                
+                    
+                    org_user = OrgUser(org_id=0, user_id=user.id)
+                    db.session.add(org_user)
+                    db.session.flush()
                 except Exception as e:
                     logger.error(f"Error processing user {email}: {str(e)}")
                     error_count += 1
