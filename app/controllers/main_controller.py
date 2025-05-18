@@ -276,6 +276,7 @@ def admin():
 @login_required
 @check_permission(required_role='admin')
 def admin_template():
+    temp_file = None
     try:
         # 创建工作簿
         wb = Workbook()
@@ -308,25 +309,35 @@ def admin_template():
         
         # 保存临时文件
         temp_file = tempfile.NamedTemporaryFile(delete=False, suffix='.xlsx')
-        wb.save(temp_file.name)
-        temp_file.close()
+        temp_file_path = temp_file.name
+        temp_file.close()  # 关闭文件句柄
+        
+        # 保存工作簿
+        wb.save(temp_file_path)
         
         # 发送文件
-        return send_file(
-            temp_file.name,
+        response = send_file(
+            temp_file_path,
             as_attachment=True,
             download_name='admin_import_template.xlsx',
             mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
         )
         
+        # 设置回调函数来删除临时文件
+        @response.call_on_close
+        def cleanup():
+            try:
+                if os.path.exists(temp_file_path):
+                    os.unlink(temp_file_path)
+            except Exception as e:
+                logger.error(f"删除临时文件失败: {str(e)}")
+        
+        return response
+        
     except Exception as e:
         logger.error(f"创建模板文件失败: {str(e)}")
         flash('创建模板失败，请重试', 'error')
         return redirect(url_for('main.admin'))
-    finally:
-        # 删除临时文件
-        if 'temp_file' in locals():
-            os.unlink(temp_file.name)
 
 @bp.route('/orgs')
 @login_required
